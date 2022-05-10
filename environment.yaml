@@ -1,0 +1,7 @@
+name: anp4nlg
+channels:
+  - defaults
+  - conda-forge
+prefix: /Users/velizarshulev/opt/miniconda3/envs/anp4nlg
+dependencies:
+  - fairseq
