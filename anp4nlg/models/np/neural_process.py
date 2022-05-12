@@ -1,14 +1,14 @@
 import torch
-import torch.nn as nn
+from fairseq.models import BaseFairseqModel, register_model
 
-from encoder import Encoder
-from aggregator import Aggregator
-from latent_distribution import LatentDistribution
-from decoder import Decoder
+from .aggregator import Aggregator, MeanAggregator
+from .decoder import Decoder, MLPDecoder
+from .encoder import Encoder, MLPEncoder
+from .latent_distribution import LatentDistribution, NormalLatentDistribution
 
 
-
-class NeuralProcess(nn.Module):
+@register_model('neural_process')
+class NeuralProcess(BaseFairseqModel):
     """ ## FROM https://github.com/EmilienDupont/neural-processes/ ##
     Implements Neural Process for functions of arbitrary dimensions.
     Parameters
@@ -28,8 +28,8 @@ class NeuralProcess(nn.Module):
     """
     # TODO decide on y_distribution
     def __init__(self, deterministic_encoder: Encoder, deterministic_aggregator: Aggregator, 
-                        latent_encoder: Encoder, latent_aggregator: Aggregator, 
-                        latent_distribution: LatentDistribution, decoder: Decoder):
+                       latent_encoder: Encoder, latent_aggregator: Aggregator, 
+                       latent_distribution: LatentDistribution, decoder: Decoder):
         super(NeuralProcess, self).__init__()
         self.deterministic_encoder = deterministic_encoder
         self.deterministic_aggregator = deterministic_aggregator
@@ -38,8 +38,41 @@ class NeuralProcess(nn.Module):
         self.latent_distribution = latent_distribution
         self.decoder = decoder
 
+    @property
+    def supported_targets(self):
+        return {"future"}
+
+    @classmethod
+    def build_model(cls, args, task):
+        # Fairseq initializes models by calling the ``build_model()``
+        # function. This provides more flexibility, since the returned model
+        # instance can be of a different type than the one that was called.
+        # In this case we'll just return a SimpleLSTMModel instance.
+
+        BATCH_SIZE = 32
+        X_DIM = 1
+        Y_DIM = 1
+        N = 4
+        M = 2
+        R_DIM = 20
+        S_DIM = (20, 2)
+        H_DIM = 20
+        Z_DIM = 20
+
+        model = NeuralProcess(
+            MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
+            MeanAggregator(X_DIM, R_DIM),
+            MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
+            MeanAggregator(X_DIM, S_DIM),
+            NormalLatentDistribution(Z_DIM, S_DIM),
+            MLPDecoder(X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM))
+
+        print(model)
+
+        return model
+
     def forward(self, x_context: torch.Tensor, y_context: torch.Tensor, 
-                        x_target: torch.Tensor, y_target: torch.Tensor =None) -> tuple:
+                        x_target: torch.Tensor, y_target: torch.Tensor=None) -> tuple:
         """
         Given context pairs (x_context, y_context) and target points x_target,
         returns a distribution over target points y_target.
@@ -61,7 +94,6 @@ class NeuralProcess(nn.Module):
         shown to work best empirically.
         Returns
         -------
-
         """
         # TODO write return statement for neural process forward
         # Infer quantities from tensor dimensions

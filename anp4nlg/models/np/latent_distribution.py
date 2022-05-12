@@ -6,7 +6,6 @@ import torch.distributions as td
 class LatentDistribution(nn.Module):
     """
     A wrapper object for any latent distribution
-
     Parameters
     ----------
     z_dim : int
@@ -23,7 +22,6 @@ class LatentDistribution(nn.Module):
     def forward(self, s: torch.Tensor) -> td.Distribution:
         """
         Return a torch.distribution object parameterized by h
-
         Parameters
         ----------
         s : torch.Tensor

@@ -1,0 +1,8 @@
+name: anp4nlg
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - fairseq
+  - sacremoses
+  - pytorch

@@ -3,9 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributions as td
 
+from fairseq.models import BaseFairseqModel
 
-class Decoder(nn.Module):
-    """ ## FROM https://github.com/EmilienDupont/neural-processes/ ##
+
+class Decoder(BaseFairseqModel):
+    """ ## ADAPTED FROM https://github.com/EmilienDupont/neural-processes/ ##
     Maps target input x_target and samples z (encoding information about the
     context points) to predictions y_target.
     Parameters

@@ -1,12 +1,13 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from fairseq.models import BaseFairseqModel
 
 from typing import Union
 
-from util import ReshapeLast
+from .util import ReshapeLast
 
-class Encoder(nn.Module):
+class Encoder(BaseFairseqModel):
     """ ## FROM https://github.com/EmilienDupont/neural-processes/ ##
     Maps an (x_i, y_i) pair to either a representation r_i or to parameter set s_i.
     Parameters
@@ -58,9 +59,3 @@ class MLPEncoder(Encoder):
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         input = torch.cat((x,y), dim=2)
         return self.input_to_r(input)
-
-class AttentiveEncoder(Encoder):
-    def __init__(self, x_dim, y_dim, r_dim):
-        super().__init__(x_dim, y_dim, r_dim)
-        # TODO implement attentive encoder
-

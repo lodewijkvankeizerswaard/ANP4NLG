@@ -3,7 +3,9 @@ import torch.nn as nn
 
 from typing import Union
 
-class Aggregator(nn.Module):
+from fairseq.models import BaseFairseqModel
+
+class Aggregator(BaseFairseqModel):
     """
     Aggregates representations r_i or paramters s_i into into a single
     representation or parameter set.
