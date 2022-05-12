@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# MacOS files
+.DS_Store
+
+# Datasets
+wikitext-103-v1.zip
+wikitext-103
+data-bin
