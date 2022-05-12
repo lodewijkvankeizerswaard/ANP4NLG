@@ -5,3 +5,5 @@ channels:
 prefix: /Users/velizarshulev/opt/miniconda3/envs/anp4nlg
 dependencies:
   - fairseq
+  - sacremoses
+  - pytorch
