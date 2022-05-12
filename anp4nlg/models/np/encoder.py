@@ -5,7 +5,7 @@ from fairseq.models import BaseFairseqModel
 
 from typing import Union
 
-from util import ReshapeLast
+from .util import ReshapeLast
 
 class Encoder(BaseFairseqModel):
     """ ## FROM https://github.com/EmilienDupont/neural-processes/ ##
