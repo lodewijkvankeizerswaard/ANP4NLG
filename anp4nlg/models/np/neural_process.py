@@ -104,8 +104,13 @@ class NeuralProcess(BaseFairseqModel):
         # _, _, y_dim = y_context.size()
 
         batch_size, max_len = src_tokens.shape
-        x = torch.arange(max_len).repeat(batch_size, 1).unsqueeze(-1) / 512
+        x = torch.arange(max_len).repeat(batch_size, 1).unsqueeze(-1) / 32
+        x = x.to(self.device)
         x_context, y_context, x_target, y_target = context_target_split(x, src_tokens)
+        # x_context.to(self.device)
+        # y_context.to(self.device)
+        # x_target.to(self.device)
+        # y_target.to(self.device)
 
         if self.training:
             # Encode context via deterministic and latent path
@@ -146,3 +151,10 @@ class NeuralProcess(BaseFairseqModel):
             p_y_pred = self.decoder(x_target, r_context, z_context)
 
             return p_y_pred
+
+    @property
+    def device(self):
+        """
+        Returns the device on which the model is. Can be useful in some situations.
+        """
+        return next(self.parameters()).device

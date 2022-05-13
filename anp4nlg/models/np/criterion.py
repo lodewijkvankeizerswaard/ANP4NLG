@@ -60,30 +60,6 @@ class NeuralProcessCriterion(FairseqCriterion):
 
         loss = self._compute_loss(p_y_pred, y_target, q_target, q_context)
         
-        # if self.tpu:
-        #     masked_tokens = None  # always project all tokens on TPU
-        # elif masked_tokens.device == torch.device("cpu"):
-        #     if not masked_tokens.any():
-        #         masked_tokens = None
-        # else:
-        #     masked_tokens = torch.where(
-        #         masked_tokens.any(),
-        #         masked_tokens,
-        #         masked_tokens.new([True]),
-        #     )
-
-        # logits = model(**sample["net_input"], masked_tokens=masked_tokens)[0]
-        # targets = model.get_targets(sample, [logits])
-        # if masked_tokens is not None:
-        #     targets = targets[masked_tokens]
-
-        # loss = modules.cross_entropy(
-        #     logits.view(-1, logits.size(-1)),
-        #     targets.view(-1),
-        #     reduction="sum",
-        #     ignore_index=self.padding_idx,
-        # )
-
         logging_output = {
             "loss": loss,
             "ntokens": sample["ntokens"],
