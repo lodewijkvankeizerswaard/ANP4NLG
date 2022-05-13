@@ -3,10 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributions as td
 
-from fairseq.models import BaseFairseqModel
+from fairseq.models import FairseqDecoder
 
-
-class Decoder(BaseFairseqModel):
+class Decoder(FairseqDecoder):
     """ ## ADAPTED FROM https://github.com/EmilienDupont/neural-processes/ ##
     Maps target input x_target and samples z (encoding information about the
     context points) to predictions y_target.
@@ -21,8 +20,8 @@ class Decoder(BaseFairseqModel):
     y_dim : int
         Dimension of y values.
     """
-    def __init__(self, x_dim: int, r_dim: int, z_dim: int, y_dim: int):
-        super(Decoder, self).__init__()
+    def __init__(self, dictionary, x_dim: int, r_dim: int, z_dim: int, y_dim: int):
+        super(Decoder, self).__init__(dictionary)
 
         self.x_dim = x_dim
         self.r_dim = r_dim
@@ -47,8 +46,8 @@ class Decoder(BaseFairseqModel):
         raise NotImplementedError("Abstract method.")
 
 class MLPDecoder(Decoder):
-    def __init__(self, x_dim: int, r_dim: int, z_dim: int, y_dim: int, h_dim: int):
-        super().__init__(x_dim, r_dim, z_dim, y_dim)
+    def __init__(self, dictionary, x_dim: int, r_dim: int, z_dim: int, y_dim: int, h_dim: int):
+        super().__init__(dictionary, x_dim, r_dim, z_dim, y_dim)
         layers = [nn.Linear(x_dim + z_dim + r_dim, h_dim),
                   nn.ReLU(inplace=True),
                   nn.Linear(h_dim, h_dim),
@@ -57,8 +56,7 @@ class MLPDecoder(Decoder):
                   nn.ReLU(inplace=True)]
 
         self.xrz_to_h = nn.Sequential(*layers)
-        self.h_to_mu = nn.Linear(h_dim, y_dim)
-        self.h_to_sigma = nn.Linear(h_dim, y_dim)
+        self.h_to_dict = nn.Linear(h_dim, len(dictionary))
 
     def forward(self, x_target: torch.Tensor, r_c: torch.Tensor, z: torch.Tensor) -> tuple:
         batch_size, num_points, _ = x_target.size()
@@ -78,8 +76,7 @@ class MLPDecoder(Decoder):
         out = self.xrz_to_h(inp)
 
         # TODO make output distr. modular
-        mu = self.h_to_mu(out)
-        sigma = F.softplus(self.h_to_sigma(out))
+        logits = self.h_to_dict(out)
 
         # return mu, sigma
-        return td.Normal(mu, sigma)
+        return logits

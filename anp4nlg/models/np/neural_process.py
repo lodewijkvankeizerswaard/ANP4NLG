@@ -1,10 +1,12 @@
 import torch
+import torch.nn as nn
 from fairseq.models import BaseFairseqModel, register_model
 
 from .aggregator import Aggregator, MeanAggregator
 from .decoder import Decoder, MLPDecoder
 from .encoder import Encoder, MLPEncoder
 from .latent_distribution import LatentDistribution, NormalLatentDistribution
+from.util import context_target_split
 
 
 @register_model('neural_process')
@@ -60,19 +62,19 @@ class NeuralProcess(BaseFairseqModel):
         Z_DIM = 20
 
         model = NeuralProcess(
-            MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
+            MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM, task.source_dictionary),
             MeanAggregator(X_DIM, R_DIM),
-            MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
+            MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM, task.source_dictionary),
             MeanAggregator(X_DIM, S_DIM),
             NormalLatentDistribution(Z_DIM, S_DIM),
-            MLPDecoder(X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM))
+            MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM)
+        )
 
         print(model)
 
         return model
 
-    def forward(self, x_context: torch.Tensor, y_context: torch.Tensor, 
-                        x_target: torch.Tensor, y_target: torch.Tensor=None) -> tuple:
+    def forward(self, src_tokens: torch.Tensor, src_lengths: torch.Tensor) -> tuple:
         """
         Given context pairs (x_context, y_context) and target points x_target,
         returns a distribution over target points y_target.
@@ -100,6 +102,10 @@ class NeuralProcess(BaseFairseqModel):
         # batch_size, num_context, x_dim = x_context.size()
         # _, num_target, _ = x_target.size()
         # _, _, y_dim = y_context.size()
+
+        batch_size, max_len = src_tokens.shape
+        x = torch.arange(max_len).repeat(batch_size, 1).unsqueeze(-1) / 512
+        x_context, y_context, x_target, y_target = context_target_split(x, src_tokens)
 
         if self.training:
             # Encode context via deterministic and latent path

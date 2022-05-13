@@ -1,13 +1,12 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from fairseq.models import BaseFairseqModel
 
 from typing import Union
 
 from .util import ReshapeLast
 
-class Encoder(BaseFairseqModel):
+class Encoder(nn.Module):
     """ ## FROM https://github.com/EmilienDupont/neural-processes/ ##
     Maps an (x_i, y_i) pair to either a representation r_i or to parameter set s_i.
     Parameters
@@ -19,12 +18,13 @@ class Encoder(BaseFairseqModel):
     r_dim : Union[int, tuple]
         Dimension of representation r or parameter set s.
     """
-    def __init__(self, x_dim: int, y_dim: int, r_dim:Union[int, tuple]):
+    def __init__(self, x_dim: int, y_dim: int, r_dim:Union[int, tuple], dictionary):
         super(Encoder, self).__init__()
 
         self.x_dim = x_dim
         self.y_dim = y_dim
         self.r_dim = r_dim  if isinstance(r_dim, tuple) else (r_dim, 1)
+        self.dictionary = dictionary
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
@@ -43,10 +43,11 @@ class Encoder(BaseFairseqModel):
 
 
 class MLPEncoder(Encoder):
-    def __init__(self, x_dim: int, y_dim: int, r_dim: Union[int, tuple], h_dim: int):
-        super().__init__(x_dim, y_dim, r_dim)
+    def __init__(self, x_dim: int, y_dim: int, r_dim: Union[int, tuple], h_dim: int, dictionary):
+        super().__init__(x_dim, y_dim, r_dim, dictionary)
         output_shape = self.r_dim
         output_size = np.prod(output_shape)
+        
         layers = [nn.Linear(x_dim + y_dim, h_dim),
                   nn.ReLU(inplace=True),
                   nn.Linear(h_dim, h_dim),
@@ -56,6 +57,13 @@ class MLPEncoder(Encoder):
 
         self.input_to_r = nn.Sequential(*layers)
 
+        self.embed_tokens = nn.Embedding(
+            num_embeddings=len(dictionary),
+            embedding_dim=y_dim,
+            padding_idx=dictionary.pad(),
+        )
+
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        input = torch.cat((x,y), dim=2)
+        embed = self.embed_tokens(y)
+        input = torch.cat((x,embed), dim=2)
         return self.input_to_r(input)
