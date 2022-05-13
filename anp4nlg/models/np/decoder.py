@@ -79,4 +79,4 @@ class MLPDecoder(Decoder):
         logits = self.h_to_dict(out)
 
         # return mu, sigma
-        return logits
+        return td.Categorical(logits=logits)

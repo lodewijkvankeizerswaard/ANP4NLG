@@ -128,7 +128,7 @@ class NeuralProcess(BaseFairseqModel):
             # Decode 
             p_y_pred = self.decoder(x_target, r_context, z_context)
 
-            return p_y_pred, q_target, q_context
+            return p_y_pred, q_target, q_context, y_target
         else:
             # Encode context via deterministic and latent path
             r_i = self.deterministic_encoder(x_context, y_context)
