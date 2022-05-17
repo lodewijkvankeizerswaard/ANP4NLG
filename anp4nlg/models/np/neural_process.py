@@ -42,7 +42,7 @@ class NeuralProcess(BaseFairseqModel):
 
     @property
     def supported_targets(self):
-        return {"future"}
+        return {"self"}
 
     @classmethod
     def build_model(cls, args, task):
