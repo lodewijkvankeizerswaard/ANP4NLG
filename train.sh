@@ -17,4 +17,5 @@ fairseq-train data-bin/wikitext-103 \
     --max-tokens 2048 \
     --update-freq 16 \
     --max-update 50000 \
-    --cpu
+    --cpu \
+    --criterion neural_process
