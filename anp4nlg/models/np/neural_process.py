@@ -144,13 +144,17 @@ class NeuralProcess(BaseFairseqModel):
             s_context = self.latent_aggregator(s_i_context)
             q_context = self.latent_distribution(s_context)
 
+            s_i_target = self.latent_encoder(x_target, y_target)
+            s_target = self.latent_aggregator(s_i_target)
+            q_target = self.latent_distribution(s_target)
+
             # Sample z
             z_context = q_context.sample()
 
             # Decode 
             p_y_pred = self.decoder(x_target, r_context, z_context)
 
-            return p_y_pred
+            return p_y_pred, q_target, q_context, y_target
 
     @property
     def device(self):
