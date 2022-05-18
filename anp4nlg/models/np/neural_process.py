@@ -29,10 +29,12 @@ class NeuralProcess(BaseFairseqModel):
         The decoder; computes y_star
     """
     # TODO decide on y_distribution
-    def __init__(self, deterministic_encoder: Encoder, deterministic_aggregator: Aggregator, 
-                       latent_encoder: Encoder, latent_aggregator: Aggregator, 
-                       latent_distribution: LatentDistribution, decoder: Decoder):
+    def __init__(self, positional_encoder: nn.Module, deterministic_encoder: Encoder, 
+                       deterministic_aggregator: Aggregator, latent_encoder: Encoder, 
+                       latent_aggregator: Aggregator, latent_distribution: LatentDistribution, 
+                       decoder: Decoder):
         super(NeuralProcess, self).__init__()
+        self.positional_encoder = positional_encoder
         self.deterministic_encoder = deterministic_encoder
         self.deterministic_aggregator = deterministic_aggregator
         self.latent_encoder = latent_encoder
@@ -43,6 +45,15 @@ class NeuralProcess(BaseFairseqModel):
     @property
     def supported_targets(self):
         return {"self"}
+
+    @staticmethod
+    def add_args(parser):
+        """ TODO add text"""
+        parser.add_argument('--positional-encoding', type=str, choices=['scalar'], default='scalar', 
+                            help="the type of positonal encoding")
+        parser.add_argument('--positional-encoding-len', type=int, default=-1, 
+                            help="the maximum sentence length to divide the positional encoding over;"
+                            " -1 use maximum sentence length per batch (default: -1)")
 
     @classmethod
     def build_model(cls, args, task):
@@ -62,6 +73,7 @@ class NeuralProcess(BaseFairseqModel):
         Z_DIM = 20
 
         model = NeuralProcess(
+            PositionalEncoding(args.positional_encoding, max_len=args.positional_encoding_len),
             MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM, task.source_dictionary),
             MeanAggregator(X_DIM, R_DIM),
             MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM, task.source_dictionary),
@@ -103,9 +115,7 @@ class NeuralProcess(BaseFairseqModel):
         # _, num_target, _ = x_target.size()
         # _, _, y_dim = y_context.size()
 
-        batch_size, max_len = src_tokens.shape
-        x = torch.arange(max_len).repeat(batch_size, 1).unsqueeze(-1) / 32
-        x = x.to(self.device)
+        x = self.positional_encoder(src_lengths)
         x_context, y_context, x_target, y_target = context_target_split(x, src_tokens)
         # x_context.to(self.device)
         # y_context.to(self.device)
@@ -162,3 +172,44 @@ class NeuralProcess(BaseFairseqModel):
         Returns the device on which the model is. Can be useful in some situations.
         """
         return next(self.parameters()).device
+
+class PositionalEncoding(nn.Module):
+    """Given a tensor of sample sequence lengths (e.g. sentence lengths), create a 
+    positional encoding for every word, and return these (x-values). Options are:
+    - scalar: scalar between 0 (bos) and 1 (eos).
+    """
+    def __init__(self, encoding: str, max_len: int=-1):
+        """
+        encoding: desired positional encoding
+        """
+        super(PositionalEncoding, self).__init__()
+        print("using positional encodings")
+        if encoding == "scalar":
+            self.fn = self._scalar_encoding
+        else:
+            print("[warning] \"{}\" not implemented, defaulting to scalar encoding!".format(encoding))
+            self.fn = self._scalar_encoding
+
+        # We need this to be on the same device as the tensors, but we do not want it to be a parameter
+        self.register_buffer('max_len', torch.Tensor([max_len]), persistent=True)
+
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        return self.fn(input)
+
+    def _scalar_encoding(self, y: torch.Tensor) -> torch.Tensor:
+        batch_size = y.shape[0]
+        max_len = y.max()
+        x = torch.arange(max_len).repeat(batch_size, 1).unsqueeze(-1).to(self.device)
+
+        if self.max_len != -1:
+            return x / self.max_len
+        else:
+            return x / max_len
+
+    @property
+    def device(self):
+        """
+        Returns the device on which the model is. Can be useful in some situations.
+        """
+        return self.max_len.device
