@@ -15,6 +15,8 @@ class NeuralProcess(BaseFairseqModel):
     Implements Neural Process for functions of arbitrary dimensions.
     Parameters
     ----------
+    positional_embedder: nn.Module
+        The module that embeds the word positions; returns x values
     deterministic_encoder : Encoder
         The encoder for the deterministic path; computes representations r_i
     deterministic_aggregator: Aggregator
@@ -29,12 +31,12 @@ class NeuralProcess(BaseFairseqModel):
         The decoder; computes y_star
     """
     # TODO decide on y_distribution
-    def __init__(self, positional_encoder: nn.Module, deterministic_encoder: Encoder, 
+    def __init__(self, positional_embedder: nn.Module, deterministic_encoder: Encoder, 
                        deterministic_aggregator: Aggregator, latent_encoder: Encoder, 
                        latent_aggregator: Aggregator, latent_distribution: LatentDistribution, 
                        decoder: Decoder):
         super(NeuralProcess, self).__init__()
-        self.positional_encoder = positional_encoder
+        self.positional_embedder = positional_embedder
         self.deterministic_encoder = deterministic_encoder
         self.deterministic_aggregator = deterministic_aggregator
         self.latent_encoder = latent_encoder
@@ -49,10 +51,10 @@ class NeuralProcess(BaseFairseqModel):
     @staticmethod
     def add_args(parser):
         """ TODO add text"""
-        parser.add_argument('--positional-encoding', type=str, choices=['scalar'], default='scalar', 
-                            help="the type of positonal encoding")
-        parser.add_argument('--positional-encoding-len', type=int, default=-1, 
-                            help="the maximum sentence length to divide the positional encoding over;"
+        parser.add_argument('--positional-embedding', type=str, choices=['scalar'], default='scalar', 
+                            help="the type of positonal embedding")
+        parser.add_argument('--positional-embedding-len', type=int, default=-1, 
+                            help="the maximum sentence length to divide the positional embedding over;"
                             " -1 use maximum sentence length per batch (default: -1)")
 
     @classmethod
@@ -73,7 +75,7 @@ class NeuralProcess(BaseFairseqModel):
         Z_DIM = 20
 
         model = NeuralProcess(
-            PositionalEncoding(args.positional_encoding, max_len=args.positional_encoding_len),
+            PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
             MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM, task.source_dictionary),
             MeanAggregator(X_DIM, R_DIM),
             MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM, task.source_dictionary),
@@ -115,7 +117,7 @@ class NeuralProcess(BaseFairseqModel):
         # _, num_target, _ = x_target.size()
         # _, _, y_dim = y_context.size()
 
-        x = self.positional_encoder(src_lengths)
+        x = self.positional_embedder(src_lengths)
         x_context, y_context, x_target, y_target = context_target_split(x, src_tokens)
         # x_context.to(self.device)
         # y_context.to(self.device)
@@ -173,21 +175,20 @@ class NeuralProcess(BaseFairseqModel):
         """
         return next(self.parameters()).device
 
-class PositionalEncoding(nn.Module):
+class PositionalEmbedding(nn.Module):
     """Given a tensor of sample sequence lengths (e.g. sentence lengths), create a 
-    positional encoding for every word, and return these (x-values). Options are:
+    positional embedding for every word, and return these (x-values). Options are:
     - scalar: scalar between 0 (bos) and 1 (eos).
     """
-    def __init__(self, encoding: str, max_len: int=-1):
+    def __init__(self, embedding: str, max_len: int=-1):
         """
-        encoding: desired positional encoding
+        encoding: desired positional embedding
         """
-        super(PositionalEncoding, self).__init__()
-        print("using positional encodings")
-        if encoding == "scalar":
+        super(PositionalEmbedding, self).__init__()
+        if embedding == "scalar":
             self.fn = self._scalar_encoding
         else:
-            print("[warning] \"{}\" not implemented, defaulting to scalar encoding!".format(encoding))
+            print("[warning] \"{}\" not implemented, defaulting to scalar embedding!".format(embedding))
             self.fn = self._scalar_encoding
 
         # We need this to be on the same device as the tensors, but we do not want it to be a parameter
