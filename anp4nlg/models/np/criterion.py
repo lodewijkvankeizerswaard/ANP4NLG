@@ -55,8 +55,9 @@ class NeuralProcessCriterion(FairseqCriterion):
 
         src_tokens = sample['net_input']['src_tokens']
         src_lengths = sample['net_input']['src_lengths']
+        y_target = sample["target"]
 
-        p_y_pred, q_target, q_context, y_target = model(src_tokens, src_lengths)
+        p_y_pred, q_target, q_context = model(src_tokens, src_lengths)
 
         loss = self._compute_loss(p_y_pred, y_target, q_target, q_context)
         

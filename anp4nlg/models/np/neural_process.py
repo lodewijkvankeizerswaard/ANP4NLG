@@ -17,6 +17,8 @@ class NeuralProcess(BaseFairseqModel):
     ----------
     positional_embedder: nn.Module
         The module that embeds the word positions; returns x values
+    word_embedder: nn.Module
+        The module that embeds the word meaning; returns y values
     deterministic_encoder : Encoder
         The encoder for the deterministic path; computes representations r_i
     deterministic_aggregator: Aggregator
@@ -31,12 +33,13 @@ class NeuralProcess(BaseFairseqModel):
         The decoder; computes y_star
     """
     # TODO decide on y_distribution
-    def __init__(self, positional_embedder: nn.Module, deterministic_encoder: Encoder, 
-                       deterministic_aggregator: Aggregator, latent_encoder: Encoder, 
-                       latent_aggregator: Aggregator, latent_distribution: LatentDistribution, 
-                       decoder: Decoder):
+    def __init__(self, positional_embedder: nn.Module, word_embedder: nn.Module,
+                       deterministic_encoder: Encoder, deterministic_aggregator: Aggregator, 
+                       latent_encoder: Encoder, latent_aggregator: Aggregator, 
+                       latent_distribution: LatentDistribution, decoder: Decoder):
         super(NeuralProcess, self).__init__()
         self.positional_embedder = positional_embedder
+        self.word_embedder = word_embedder
         self.deterministic_encoder = deterministic_encoder
         self.deterministic_aggregator = deterministic_aggregator
         self.latent_encoder = latent_encoder
@@ -76,9 +79,14 @@ class NeuralProcess(BaseFairseqModel):
 
         model = NeuralProcess(
             PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
-            MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM, task.source_dictionary),
+            nn.Embedding(
+                num_embeddings=len(task.dictionary),
+                embedding_dim=Y_DIM,
+                padding_idx=task.dictionary.pad(),
+            ),
+            MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
             MeanAggregator(X_DIM, R_DIM),
-            MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM, task.source_dictionary),
+            MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
             MeanAggregator(X_DIM, S_DIM),
             NormalLatentDistribution(Z_DIM, S_DIM),
             MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM)
@@ -118,7 +126,8 @@ class NeuralProcess(BaseFairseqModel):
         # _, _, y_dim = y_context.size()
 
         x = self.positional_embedder(src_lengths)
-        x_context, y_context, x_target, y_target = context_target_split(x, src_tokens)
+        y = self.word_embedder(src_tokens)
+        x_context, y_context, x_target, y_target = context_target_split(x, y)
         # x_context.to(self.device)
         # y_context.to(self.device)
         # x_target.to(self.device)
@@ -145,7 +154,7 @@ class NeuralProcess(BaseFairseqModel):
             # Decode 
             p_y_pred = self.decoder(x_target, r_context, z_context)
 
-            return p_y_pred, q_target, q_context, y_target
+            return p_y_pred, q_target, q_context
         else:
             # Encode context via deterministic and latent path
             r_i = self.deterministic_encoder(x_context, y_context)
@@ -166,7 +175,7 @@ class NeuralProcess(BaseFairseqModel):
             # Decode 
             p_y_pred = self.decoder(x_target, r_context, z_context)
 
-            return p_y_pred, q_target, q_context, y_target
+            return p_y_pred, q_target, q_context
 
     @property
     def device(self):

@@ -18,13 +18,12 @@ class Encoder(nn.Module):
     r_dim : Union[int, tuple]
         Dimension of representation r or parameter set s.
     """
-    def __init__(self, x_dim: int, y_dim: int, r_dim:Union[int, tuple], dictionary):
+    def __init__(self, x_dim: int, y_dim: int, r_dim:Union[int, tuple]):
         super(Encoder, self).__init__()
 
         self.x_dim = x_dim
         self.y_dim = y_dim
         self.r_dim = r_dim  if isinstance(r_dim, tuple) else (r_dim, 1)
-        self.dictionary = dictionary
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
@@ -43,8 +42,8 @@ class Encoder(nn.Module):
 
 
 class MLPEncoder(Encoder):
-    def __init__(self, x_dim: int, y_dim: int, r_dim: Union[int, tuple], h_dim: int, dictionary):
-        super().__init__(x_dim, y_dim, r_dim, dictionary)
+    def __init__(self, x_dim: int, y_dim: int, r_dim: Union[int, tuple], h_dim: int):
+        super().__init__(x_dim, y_dim, r_dim)
         output_shape = self.r_dim
         output_size = np.prod(output_shape)
         
@@ -57,13 +56,6 @@ class MLPEncoder(Encoder):
 
         self.input_to_r = nn.Sequential(*layers)
 
-        self.embed_tokens = nn.Embedding(
-            num_embeddings=len(dictionary),
-            embedding_dim=y_dim,
-            padding_idx=dictionary.pad(),
-        )
-
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        embed = self.embed_tokens(y)
-        input = torch.cat((x,embed), dim=2)
+        input = torch.cat((x,y), dim=2)
         return self.input_to_r(input)

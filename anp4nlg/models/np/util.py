@@ -19,16 +19,16 @@ def context_target_split(x, y):
         Number of additional target points.
     """
     num_points = x.shape[1]
-    num_context = int(0.5 * num_points) - 1
-    num_extra_target = int(0.5 * num_points) - 1
+    num_context = int(0.5 * num_points)
+    num_extra_target = int(0.5 * num_points)
     # Sample locations of context and target points
     locations = np.random.choice(num_points,
                                  size=num_context + num_extra_target,
                                  replace=False)
     x_context = x[:, locations[:num_context], :]
-    y_context = y[:, locations[:num_context]]
+    y_context = y[:, locations[:num_context], :]
     x_target = x[:, locations, :]
-    y_target = y[:, locations]
+    y_target = y[:, locations, :]
     return x_context, y_context, x_target, y_target
 
 class ReshapeLast(nn.Module):
