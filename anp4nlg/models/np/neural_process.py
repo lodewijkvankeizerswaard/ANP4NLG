@@ -59,6 +59,8 @@ class NeuralProcess(BaseFairseqModel):
         parser.add_argument('--positional-embedding-len', type=int, default=-1, 
                             help="the maximum sentence length to divide the positional embedding over;"
                             " -1 use maximum sentence length per batch (default: -1)")
+        parser.add_argument('--word_embedding_dim', type=int, default=300,
+                            help="the dimensionality of the word embeddings")
 
     @classmethod
     def build_model(cls, args, task):
@@ -69,7 +71,7 @@ class NeuralProcess(BaseFairseqModel):
 
         BATCH_SIZE = 32
         X_DIM = 1
-        Y_DIM = 1
+        Y_DIM = args.word_embedding_dim
         N = 4
         M = 2
         R_DIM = 20
