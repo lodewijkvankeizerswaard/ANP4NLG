@@ -69,4 +69,4 @@ class AttentionEncoder(Encoder):
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         input = torch.cat((x,y), dim=2)
-        return self.attn(input, input, input)
+        return self.attn(input, input, input)[0]

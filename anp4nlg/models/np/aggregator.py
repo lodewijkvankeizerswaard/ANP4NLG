@@ -40,15 +40,16 @@ class MeanAggregator(Aggregator):
 
     def forward(self, r_i: torch.Tensor) -> torch.Tensor:
         # TODO check dimension for mean aggregator
-        
         return torch.mean(r_i, dim=1)
 
 class AttentionAggregator(Aggregator):
     def __init__(self, x_dim: int, r_dim: Union[int, tuple]):
         super().__init__(x_dim, r_dim)
         # Attention with single head
-        self.attn = nn.MultiheadAttention(self.r_dim[0], 1, batch_first=True)
+        self.attn = nn.MultiheadAttention(self.r_dim[1], 1, batch_first=True)
 
     def forward(self, r_i: torch.Tensor, x_context: torch.Tensor, x_target: torch.Tensor) -> torch.Tensor:
         # TODO check dimension for mean aggregator
-        return self.attn(x_target, x_context, r_i)
+        
+        print(r_i.shape, x_context.shape, x_target.shape)
+        return self.attn(x_target, x_context, r_i)[0]
