@@ -2,7 +2,7 @@
 
 fairseq-train data-bin/wikitext-103 \
     --task language_modeling \
-    --self-target \
+    --self-target --attentive \
     --save-dir checkpoints/transformer_wikitext-103 \
     --arch neural_process_lm --user-dir anp4nlg \
     --optimizer adam \

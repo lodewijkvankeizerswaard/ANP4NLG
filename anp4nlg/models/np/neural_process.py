@@ -61,6 +61,7 @@ class NeuralProcess(BaseFairseqModel):
                             " -1 use maximum sentence length per batch (default: -1)")
         parser.add_argument('--word_embedding_dim', type=int, default=300,
                             help="the dimensionality of the word embeddings")
+        parser.add_argument('--attentive', default=False, action='store_true')
 
     @classmethod
     def build_model(cls, args, task):
@@ -78,21 +79,39 @@ class NeuralProcess(BaseFairseqModel):
         S_DIM = (20, 2)
         H_DIM = 20
         Z_DIM = 20
-
-        model = NeuralProcess(
-            PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
-            nn.Embedding(
-                num_embeddings=len(task.dictionary),
-                embedding_dim=Y_DIM,
-                padding_idx=task.dictionary.pad(),
-            ),
-            MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
-            MeanAggregator(X_DIM, R_DIM),
-            MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
-            MeanAggregator(X_DIM, S_DIM),
-            NormalLatentDistribution(Z_DIM, S_DIM),
-            MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM)
-        )
+            
+        if args.attentive:
+            print("USING ATTENTIVE MODEL")
+            model = NeuralProcess(
+                PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
+                nn.Embedding(
+                    num_embeddings=len(task.dictionary),
+                    embedding_dim=Y_DIM,
+                    padding_idx=task.dictionary.pad(),
+                ),
+                AttentionEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
+                AttentionAggregator(X_DIM, R_DIM),
+                AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
+                AttentionAggregator(X_DIM, S_DIM),
+                NormalLatentDistribution(Z_DIM, S_DIM),
+                MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM)
+            )
+        else:
+            print("USING MLP MODEL")
+            model = NeuralProcess(
+                PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
+                nn.Embedding(
+                    num_embeddings=len(task.dictionary),
+                    embedding_dim=Y_DIM,
+                    padding_idx=task.dictionary.pad(),
+                ),
+                MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
+                MeanAggregator(X_DIM, R_DIM),
+                MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
+                MeanAggregator(X_DIM, S_DIM),
+                NormalLatentDistribution(Z_DIM, S_DIM),
+                MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM)
+            )
 
         print(model)
 
@@ -148,7 +167,7 @@ class NeuralProcess(BaseFairseqModel):
             print(r_i.shape, s_i_context.shape)
 
             # Construct context vector and latent context distribution
-            r_context = self.deterministic_aggregator(r_i)
+            r_context = self.deterministic_aggregator(r_i, x_context, x_target)
             s_context = self.latent_aggregator(s_i_context)
             q_context = self.latent_distribution(s_context)
 
@@ -179,7 +198,7 @@ class NeuralProcess(BaseFairseqModel):
             s_i_context = self.latent_encoder(x_context, y_context)
 
             # Construct context vector and latent context distribution
-            r_context = self.deterministic_aggregator(r_i)
+            r_context = self.deterministic_aggregator(r_i, x_context, x_target)
             s_context = self.latent_aggregator(s_i_context)
             q_context = self.latent_distribution(s_context)
 
@@ -242,145 +261,145 @@ class PositionalEmbedding(nn.Module):
         """
         return self.max_len.device
 
-@register_model('attentive_neural_process')
-class AttentiveNeuralProcess(NeuralProcess):
-    """ ## FROM https://github.com/EmilienDupont/neural-processes/ ##
-    Implements Attentative Neural Process for functions of arbitrary dimensions.
-    Parameters
-    ----------
-    positional_embedder: nn.Module
-        The module that embeds the word positions; returns x values
-    word_embedder: nn.Module
-        The module that embeds the word meaning; returns y values
-    deterministic_encoder : Encoder
-        The encoder for the deterministic path; computes representations r_i
-    deterministic_aggregator: Aggregator
-        The aggregator for the deterministic path; computes r_c or r_star
-    latent_encoder : Encoder
-        The encoder for the latent path; computes s_i
-    latent_aggregator : Aggregator
-        The aggregator for the latent path; computes s
-    latent_distribution : LatentDistribution
-        The latent distribution parameterized by s
-    decoder : Decoder
-        The decoder; computes y_star
-    """
-    def __init__(self, *args, **kwargs):
-        super(AttentiveNeuralProcess, self).__init__(*args, **kwargs)
+# @register_model('attentive_neural_process')
+# class AttentiveNeuralProcess(NeuralProcess):
+#     """ ## FROM https://github.com/EmilienDupont/neural-processes/ ##
+#     Implements Attentative Neural Process for functions of arbitrary dimensions.
+#     Parameters
+#     ----------
+#     positional_embedder: nn.Module
+#         The module that embeds the word positions; returns x values
+#     word_embedder: nn.Module
+#         The module that embeds the word meaning; returns y values
+#     deterministic_encoder : Encoder
+#         The encoder for the deterministic path; computes representations r_i
+#     deterministic_aggregator: Aggregator
+#         The aggregator for the deterministic path; computes r_c or r_star
+#     latent_encoder : Encoder
+#         The encoder for the latent path; computes s_i
+#     latent_aggregator : Aggregator
+#         The aggregator for the latent path; computes s
+#     latent_distribution : LatentDistribution
+#         The latent distribution parameterized by s
+#     decoder : Decoder
+#         The decoder; computes y_star
+#     """
+#     def __init__(self, *args, **kwargs):
+#         super(AttentiveNeuralProcess, self).__init__(*args, **kwargs)
 
-    @classmethod
-    def build_model(cls, args, task):
-        # Fairseq initializes models by calling the ``build_model()``
-        # function. This provides more flexibility, since the returned model
-        # instance can be of a different type than the one that was called.
-        # In this case we'll just return a SimpleLSTMModel instance.
+#     @classmethod
+#     def build_model(cls, args, task):
+#         # Fairseq initializes models by calling the ``build_model()``
+#         # function. This provides more flexibility, since the returned model
+#         # instance can be of a different type than the one that was called.
+#         # In this case we'll just return a SimpleLSTMModel instance.
 
-        BATCH_SIZE = 32
-        X_DIM = 1
-        Y_DIM = args.word_embedding_dim
-        N = 4
-        M = 2
-        R_DIM = 20
-        S_DIM = (20, 2)
-        H_DIM = 20
-        Z_DIM = 20
+#         BATCH_SIZE = 32
+#         X_DIM = 1
+#         Y_DIM = args.word_embedding_dim
+#         N = 4
+#         M = 2
+#         R_DIM = 20
+#         S_DIM = (20, 2)
+#         H_DIM = 20
+#         Z_DIM = 20
 
-        model = NeuralProcess(
-            PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
-            nn.Embedding(
-                num_embeddings=len(task.dictionary),
-                embedding_dim=Y_DIM,
-                padding_idx=task.dictionary.pad(),
-            ),
-            AttentionEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
-            AttentionAggregator(X_DIM, R_DIM),
-            AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
-            AttentionAggregator(X_DIM, S_DIM),
-            NormalLatentDistribution(Z_DIM, S_DIM),
-            MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM)
-        )
+#         model = NeuralProcess(
+#             PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
+#             nn.Embedding(
+#                 num_embeddings=len(task.dictionary),
+#                 embedding_dim=Y_DIM,
+#                 padding_idx=task.dictionary.pad(),
+#             ),
+#             AttentionEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
+#             AttentionAggregator(X_DIM, R_DIM),
+#             AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
+#             AttentionAggregator(X_DIM, S_DIM),
+#             NormalLatentDistribution(Z_DIM, S_DIM),
+#             MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM)
+#         )
 
-        print(model)
+#         print(model)
 
-        return model
+#         return model
 
-    def forward(self, src_tokens: torch.Tensor, src_lengths: torch.Tensor) -> tuple:
-        """
-        Given context pairs (x_context, y_context) and target points x_target,
-        returns a distribution over target points y_target.
-        Parameters
-        ----------
-        x_context : torch.Tensor
-            Shape (batch_size, num_context, x_dim). Note that x_context is a
-            subset of x_target.
-        y_context : torch.Tensor
-            Shape (batch_size, num_context, y_dim)
-        x_target : torch.Tensor
-            Shape (batch_size, num_target, x_dim)
-        y_target : torch.Tensor or None
-            Shape (batch_size, num_target, y_dim). Only used during training.
-        Note
-        ----
-        We follow the convention given in "Empirical Evaluation of Neural
-        Process Objectives" where context is a subset of target points. This was
-        shown to work best empirically.
-        Returns
-        -------
-        """
-        # TODO write return statement for neural process forward
-        # Infer quantities from tensor dimensions
-        # batch_size, num_context, x_dim = x_context.size()
-        # _, num_target, _ = x_target.size()
-        # _, _, y_dim = y_context.size()
+#     def forward(self, src_tokens: torch.Tensor, src_lengths: torch.Tensor) -> tuple:
+#         """
+#         Given context pairs (x_context, y_context) and target points x_target,
+#         returns a distribution over target points y_target.
+#         Parameters
+#         ----------
+#         x_context : torch.Tensor
+#             Shape (batch_size, num_context, x_dim). Note that x_context is a
+#             subset of x_target.
+#         y_context : torch.Tensor
+#             Shape (batch_size, num_context, y_dim)
+#         x_target : torch.Tensor
+#             Shape (batch_size, num_target, x_dim)
+#         y_target : torch.Tensor or None
+#             Shape (batch_size, num_target, y_dim). Only used during training.
+#         Note
+#         ----
+#         We follow the convention given in "Empirical Evaluation of Neural
+#         Process Objectives" where context is a subset of target points. This was
+#         shown to work best empirically.
+#         Returns
+#         -------
+#         """
+#         # TODO write return statement for neural process forward
+#         # Infer quantities from tensor dimensions
+#         # batch_size, num_context, x_dim = x_context.size()
+#         # _, num_target, _ = x_target.size()
+#         # _, _, y_dim = y_context.size()
 
-        x = self.positional_embedder(src_lengths)
-        y = self.word_embedder(src_tokens)
-        x_context, y_context, x_target, y_target = context_target_split(x, y)
-        # x_context.to(self.device)
-        # y_context.to(self.device)
-        # x_target.to(self.device)
-        # y_target.to(self.device)
+#         x = self.positional_embedder(src_lengths)
+#         y = self.word_embedder(src_tokens)
+#         x_context, y_context, x_target, y_target = context_target_split(x, y)
+#         # x_context.to(self.device)
+#         # y_context.to(self.device)
+#         # x_target.to(self.device)
+#         # y_target.to(self.device)
 
-        if self.training:
-            # Encode context via deterministic and latent path
-            r_i = self.deterministic_encoder(x_context, y_context)
-            s_i_context = self.latent_encoder(x_context, y_context)
+#         if self.training:
+#             # Encode context via deterministic and latent path
+#             r_i = self.deterministic_encoder(x_context, y_context)
+#             s_i_context = self.latent_encoder(x_context, y_context)
 
-            # Construct context vector and latent context distribution
-            r_context = self.deterministic_aggregator(r_i, x_context, x_target)
-            s_context = self.latent_aggregator(s_i_context)
-            q_context = self.latent_distribution(s_context)
+#             # Construct context vector and latent context distribution
+#             r_context = self.deterministic_aggregator(r_i, x_context, x_target)
+#             s_context = self.latent_aggregator(s_i_context)
+#             q_context = self.latent_distribution(s_context)
 
-            # Encode targets and construct latent target distribution
-            s_i_target = self.latent_encoder(x_target, y_target)
-            s_target = self.latent_aggregator(s_i_target)
-            q_target = self.latent_distribution(s_target)
+#             # Encode targets and construct latent target distribution
+#             s_i_target = self.latent_encoder(x_target, y_target)
+#             s_target = self.latent_aggregator(s_i_target)
+#             q_target = self.latent_distribution(s_target)
 
-            # Sample z
-            z_context = q_context.sample()
+#             # Sample z
+#             z_context = q_context.sample()
 
-            # Decode 
-            p_y_pred = self.decoder(x_target, r_context, z_context)
+#             # Decode 
+#             p_y_pred = self.decoder(x_target, r_context, z_context)
 
-            return p_y_pred, q_target, q_context
-        else:
-            # Encode context via deterministic and latent path
-            r_i = self.deterministic_encoder(x_context, y_context)
-            s_i_context = self.latent_encoder(x_context, y_context)
+#             return p_y_pred, q_target, q_context
+#         else:
+#             # Encode context via deterministic and latent path
+#             r_i = self.deterministic_encoder(x_context, y_context)
+#             s_i_context = self.latent_encoder(x_context, y_context)
 
-            # Construct context vector and latent context distribution
-            r_context = self.deterministic_aggregator(r_i, x_context, x_target)
-            s_context = self.latent_aggregator(s_i_context)
-            q_context = self.latent_distribution(s_context)
+#             # Construct context vector and latent context distribution
+#             r_context = self.deterministic_aggregator(r_i, x_context, x_target)
+#             s_context = self.latent_aggregator(s_i_context)
+#             q_context = self.latent_distribution(s_context)
 
-            s_i_target = self.latent_encoder(x_target, y_target)
-            s_target = self.latent_aggregator(s_i_target)
-            q_target = self.latent_distribution(s_target)
+#             s_i_target = self.latent_encoder(x_target, y_target)
+#             s_target = self.latent_aggregator(s_i_target)
+#             q_target = self.latent_distribution(s_target)
 
-            # Sample z
-            z_context = q_context.sample()
+#             # Sample z
+#             z_context = q_context.sample()
 
-            # Decode 
-            p_y_pred = self.decoder(x_target, r_context, z_context)
+#             # Decode 
+#             p_y_pred = self.decoder(x_target, r_context, z_context)
 
-            return p_y_pred, q_target, q_context
+#             return p_y_pred, q_target, q_context
