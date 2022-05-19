@@ -51,5 +51,6 @@ class AttentionAggregator(Aggregator):
     def forward(self, r_i: torch.Tensor, x_context: torch.Tensor, x_target: torch.Tensor) -> torch.Tensor:
         # TODO check dimension for mean aggregator
         
-        print(r_i.shape, x_context.shape, x_target.shape)
+        print("Query (x_target) shape :", x_target.shape)
+        print("Key (x_context), Value (r_i) shapes", x_context.shape, r_i.shape)
         return self.attn(x_target, x_context, r_i)[0]
