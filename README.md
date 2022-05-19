@@ -22,5 +22,11 @@ The MaskGAN consists of a reinforcement learning based generative network, and a
 - What dataset / task will we be traning on?
 - What dataset / task will we be evaluating on?
 
-## Questions for TA
+## Questions for TA May 12th Meeting 1
 - We maybe want to compare our implementation to the MaskGAN model. In case you are not aware of this paper, in summary they state that the discrete nature of language makes it infeasable to propagate the gradients from the discriminator to the generator, and thus train the generator using reinforcement learning. Although, the MaskGAN and our ANP would in principle be comparable, I was thinking that we can also use a standard GAN (without reinforcement learning), and use some discrete approximation covered in the Advance Approximate Inference for Deep Latent Variable Models module. This would mean that there is a lot more work (and experimenting) to do, but I think it will be a more interesting comparison. Do you agree, and do you think it is feasable?
+
+## Updates and Questions for TA May 20th Meething 2
+- We finished the draft version for the Introduction and Related work. As of now we are still working on the Approach section.
+- We managed to implement (original) Neural Processes, loss goes down yahy! Now we are adding attention as well. As of now training takes 1 epoch takes 13 minutes with a very basic NLP (20 hidden neurons per hidden layer, with 4 layers).  
+- We feel like we are running out of time. Because we still need to do the training and hyperparameter tuning
+- Thing we still need to do: half of the points are context and half of the points become target. It works, but we cannot do this, because if we sample from this, then we need to create our own context and target sets. MAKE A SAMPLE FUNCTION?? 
