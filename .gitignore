@@ -137,3 +137,6 @@ dmypy.json
 wikitext-103-v1.zip
 wikitext-103
 data-bin
+
+# PyTorch models
+checkpoints
