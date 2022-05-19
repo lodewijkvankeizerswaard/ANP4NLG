@@ -6,3 +6,4 @@ dependencies:
   - fairseq
   - sacremoses
   - pytorch
+  - wandb
