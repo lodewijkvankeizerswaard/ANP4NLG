@@ -18,12 +18,12 @@ class Encoder(nn.Module):
     r_dim : Union[int, tuple]
         Dimension of representation r or parameter set s.
     """
-    def __init__(self, x_dim: int, y_dim: int, r_dim:Union[int, tuple]):
+    def __init__(self, x_dim: int, y_dim: int, rs_dim:Union[int, tuple]):
         super(Encoder, self).__init__()
 
         self.x_dim = x_dim
         self.y_dim = y_dim
-        self.r_dim = r_dim  if isinstance(r_dim, tuple) else (r_dim, 1)
+        self.rs_dim = rs_dim  if isinstance(rs_dim, tuple) else (rs_dim, 1)
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
@@ -42,9 +42,9 @@ class Encoder(nn.Module):
 
 
 class MLPEncoder(Encoder):
-    def __init__(self, x_dim: int, y_dim: int, r_dim: Union[int, tuple], h_dim: int):
-        super().__init__(x_dim, y_dim, r_dim)
-        output_shape = self.r_dim
+    def __init__(self, x_dim: int, y_dim: int, rs_dim: Union[int, tuple], h_dim: int):
+        super().__init__(x_dim, y_dim, rs_dim)
+        output_shape = self.rs_dim
         output_size = np.prod(output_shape)
         
         layers = [nn.Linear(x_dim + y_dim, h_dim),
@@ -54,16 +54,17 @@ class MLPEncoder(Encoder):
                   nn.Linear(h_dim, output_size),
                   ReshapeLast(output_shape)]
 
-        self.input_to_r = nn.Sequential(*layers)
+        self.input_to_rs = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         input = torch.cat((x,y), dim=2)
-        return self.input_to_r(input)
+
+        return self.input_to_rs(input)
 
 class AttentionEncoder(Encoder):
-    def __init__(self, x_dim: int, y_dim: int, r_dim: Union[int, tuple], h_dim: int=None):
-        super().__init__(x_dim, y_dim, r_dim)
-        output_shape = self.r_dim
+    def __init__(self, x_dim: int, y_dim: int, rs_dim: Union[int, tuple], h_dim: int=None):
+        super().__init__(x_dim, y_dim, rs_dim)
+        output_shape = self.rs_dim
         output_size = np.prod(output_shape)
         
         self.W_Q = nn.Linear(x_dim + y_dim, output_shape)
