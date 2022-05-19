@@ -61,12 +61,24 @@ class MLPEncoder(Encoder):
         return self.input_to_rs(input)
 
 class AttentionEncoder(Encoder):
-    def __init__(self, x_dim: int, y_dim: int, rs_dim: Union[int, tuple]):
+    def __init__(self, x_dim: int, y_dim: int, rs_dim: Union[int, tuple], h_dim):
         super().__init__(x_dim, y_dim, rs_dim)
+        output_shape = self.rs_dim
+        output_size = np.prod(output_shape)
+
         # Attention with single head
+        layers = [nn.Linear(x_dim + y_dim, h_dim),
+                  nn.ReLU(inplace=True),
+                  nn.Linear(h_dim, h_dim),
+                  nn.ReLU(inplace=True),
+                  nn.Linear(h_dim, output_size),
+                  ReshapeLast(output_shape)]
+
+        self.input_to_rs = nn.Sequential(*layers)
         self.attn = nn.MultiheadAttention(x_dim + y_dim, 1, batch_first=True)
 
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         input = torch.cat((x,y), dim=2)
-        return self.attn(input, input, input)[0]
+        attended_points = self.attn(input, input, input)[0]
+        return self.input_to_rs(attended_points)
