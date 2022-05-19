@@ -129,29 +129,45 @@ class NeuralProcess(BaseFairseqModel):
 
         x = self.positional_embedder(src_lengths)
         y = self.word_embedder(src_tokens)
+        
         x_context, y_context, x_target, y_target = context_target_split(x, y)
         # x_context.to(self.device)
         # y_context.to(self.device)
         # x_target.to(self.device)
         # y_target.to(self.device)
 
+        # print("x_context, y_context, x_target, y_target")
+        # print(x_context.shape, y_context.shape, x_target.shape, y_target.shape)
+
         if self.training:
             # Encode context via deterministic and latent path
             r_i = self.deterministic_encoder(x_context, y_context)
             s_i_context = self.latent_encoder(x_context, y_context)
+
+            # print("r_i, s_i_context")
+            # print(r_i.shape, s_i_context.shape)
 
             # Construct context vector and latent context distribution
             r_context = self.deterministic_aggregator(r_i)
             s_context = self.latent_aggregator(s_i_context)
             q_context = self.latent_distribution(s_context)
 
+            # print("r_context, s_context, q_context")
+            # print(r_context.shape, s_context.shape, q_context.shape)
+
             # Encode targets and construct latent target distribution
             s_i_target = self.latent_encoder(x_target, y_target)
             s_target = self.latent_aggregator(s_i_target)
             q_target = self.latent_distribution(s_target)
 
+            # print("s_i_target, s_target, q_target")
+            # print(s_i_target.shape, s_target.shape, q_target.shape)
+
             # Sample z
             z_context = q_context.sample()
+
+            # print("z_context")
+            # print(z_context.shape)
 
             # Decode 
             p_y_pred = self.decoder(x_target, r_context, z_context)
@@ -276,9 +292,9 @@ class AttentiveNeuralProcess(NeuralProcess):
                 embedding_dim=Y_DIM,
                 padding_idx=task.dictionary.pad(),
             ),
-            AttentionEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
+            AttentionEncoder(X_DIM, Y_DIM, R_DIM),
             AttentionAggregator(X_DIM, R_DIM),
-            AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
+            AttentionEncoder(X_DIM, Y_DIM, S_DIM),
             AttentionAggregator(X_DIM, S_DIM),
             NormalLatentDistribution(Z_DIM, S_DIM),
             MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM)
@@ -353,7 +369,7 @@ class AttentiveNeuralProcess(NeuralProcess):
             s_i_context = self.latent_encoder(x_context, y_context)
 
             # Construct context vector and latent context distribution
-            r_context = self.deterministic_aggregator(r_i)
+            r_context = self.deterministic_aggregator(r_i, x_context, x_target)
             s_context = self.latent_aggregator(s_i_context)
             q_context = self.latent_distribution(s_context)
 
