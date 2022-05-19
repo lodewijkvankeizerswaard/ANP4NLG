@@ -66,6 +66,9 @@ class AttentionEncoder(Encoder):
         output_shape = self.rs_dim
         output_size = np.prod(output_shape)
 
+        # Attention with single head
+        self.attn = nn.MultiheadAttention(x_dim + y_dim, 1, batch_first=True)
+
         layers = [nn.Linear(x_dim + y_dim, h_dim),
                   nn.ReLU(inplace=True),
                   nn.Linear(h_dim, h_dim),
@@ -74,11 +77,10 @@ class AttentionEncoder(Encoder):
                   ReshapeLast(output_shape)]
 
         self.input_to_rs = nn.Sequential(*layers)
-        # Attention with single head
-        self.attn = nn.MultiheadAttention(x_dim + y_dim, 1, batch_first=True)
+        
 
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         input = torch.cat((x,y), dim=2)
-        attended_points = self.attn(input, input, input)[0]
-        return self.input_to_rs(attended_points)
+        attn_output = self.attn(input, input, input)[0]
+        return self.input_to_rs(attn_output)
