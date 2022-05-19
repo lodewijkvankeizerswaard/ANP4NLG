@@ -30,3 +30,4 @@ The MaskGAN consists of a reinforcement learning based generative network, and a
 - We managed to implement (original) Neural Processes, loss goes down yahy! Now we are adding attention as well. As of now training takes 1 epoch takes 13 minutes with a very basic NLP (20 hidden neurons per hidden layer, with 4 layers).  
 - We feel like we are running out of time. Because we still need to do the training and hyperparameter tuning
 - Thing we still need to do: half of the points are context and half of the points become target. It works, but we cannot do this, because if we sample from this, then we need to create our own context and target sets. MAKE A SAMPLE FUNCTION?? 
+- Do we need to make a anonymous GitHub repository when we upload the report? 
