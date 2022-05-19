@@ -59,8 +59,8 @@ class MLPEncoder(Encoder):
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         input = torch.cat((x,y), dim=2)
 
-        print("input", input.shape)
-        print("output", self.input_to_rs(input).shape)
+        # print("input", input.shape)
+        # print("output", self.input_to_rs(input).shape)
         return self.input_to_rs(input)
 
 class AttentionEncoder(Encoder):
@@ -77,13 +77,13 @@ class AttentionEncoder(Encoder):
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         input = torch.cat((x,y), dim=2)
 
-        print(input.shape)
+        # print(input.shape)
 
         Q = self.W_Q(input)
         K = self.W_K(input)
         V = self.W_V(input)
 
-        print(Q.shape, K.shape, V.shape)
+        # print(Q.shape, K.shape, V.shape)
         scores = Q @ K.T
         weights = torch.softmax(scores / K.shape[1] ** 0.5, axis=1)
         return weights @ V

@@ -40,8 +40,8 @@ class MeanAggregator(Aggregator):
 
     def forward(self, r_i: torch.Tensor) -> torch.Tensor:
         # TODO check dimension for mean aggregator
-        print("Aggregator input shape:", r_i.shape)
-        print("Aggregator output shape:", torch.mean(r_i, dim=1).shape)
+        # print("Aggregator input shape:", r_i.shape)
+        # print("Aggregator output shape:", torch.mean(r_i, dim=1).shape)
         return torch.mean(r_i, dim=1)
 
 class AttentionAggregator(Aggregator):
@@ -54,7 +54,7 @@ class AttentionAggregator(Aggregator):
 
     def forward(self, r_i: torch.Tensor, x_context: torch.Tensor, x_target: torch.Tensor) -> torch.Tensor:
         # TODO check dimension for mean aggregator
-        print(r_i.shape, x_context.shape, x_target.shape)
+        # print(r_i.shape, x_context.shape, x_target.shape)
         K = self.W_K(x_context)
         Q = self.W_Q(x_target)
         V = self.W_V(r_i)
