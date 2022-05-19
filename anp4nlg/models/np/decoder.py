@@ -60,6 +60,7 @@ class MLPDecoder(Decoder):
 
     def forward(self, x_target: torch.Tensor, r_c: torch.Tensor, z: torch.Tensor) -> tuple:
         batch_size, num_points, _ = x_target.size()
+        print("Z shape:", z.shape)
         # Repeat r_c, so it can be concatenated with every x. This changes shape
         # from (batch_size, r_dim, 1) to (batch_size, num_points, r_dim)
         r_c = r_c.unsqueeze(1).squeeze(-1).repeat(1, num_points, 1)
