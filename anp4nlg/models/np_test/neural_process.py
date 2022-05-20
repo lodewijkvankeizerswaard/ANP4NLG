@@ -3,14 +3,14 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from fairseq.models import (FairseqIncrementalDecoder, FairseqLanguageModel,
                             register_model)
 from fairseq.models.fairseq_encoder import EncoderOut
-from fairseq.modules import PositionalEmbedding
 
 
 class MLPEncoder(nn.Module):
-    def __init__(self, x_dim=128, y_dim=128, rs_dim=(128, 2), h_dim=128):
+    def __init__(self, x_dim=1, y_dim=300, rs_dim=(20, 1), h_dim=20):
         super().__init__()
         self.output_shape = rs_dim
         output_size = np.prod(self.output_shape)
@@ -25,19 +25,19 @@ class MLPEncoder(nn.Module):
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         input = torch.cat((x,y), dim=2)
+        input = self.input_to_rs(input)
 
-        return self.input_to_rs(input).reshape(
-            input.shape[:-1] + self.output_shape)
+        return input.reshape(input.shape[:-1] + self.output_shape)
 
 
 class MLPDecoder(nn.Module):
     def __init__(
         self,
         dictionary,
-        x_dim: int = 128,
-        r_dim: int = 128,
-        z_dim: int = 128,
-        h_dim: int = 128
+        x_dim: int = 1,
+        r_dim: int = 20,
+        z_dim: int = 20,
+        h_dim: int = 20
     ):
         super().__init__()
 
@@ -77,7 +77,7 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
 
         # Deterministic and latent encoders
         self.deterministic_encoder = MLPEncoder()
-        self.latent_encoder = MLPEncoder()
+        self.latent_encoder = MLPEncoder(rs_dim=(20, 2))
 
         # Decoder
         self.decoder = MLPDecoder(dictionary)
@@ -110,8 +110,8 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
 
         # Encode targets and construct latent target distribution
         s_i_target = self.latent_encoder(x_target, y_target)
-        s_target = self.latent_aggregator(s_i_target)
-        q_target = self.latent_distribution(s_target)
+        s_target = torch.mean(s_i_target, dim=1)
+        q_target = self._normal_latent_distribution(s_target)
 
         # Sample z
         z_context = q_context.sample()
@@ -123,7 +123,7 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
 
     def _encode_positions(self, tokens):
         batch_size = tokens.shape[0]
-        max_len = tokens.max()
+        max_len = tokens.shape[1]
         x = torch.arange(max_len).repeat(batch_size, 1).unsqueeze(-1).to(tokens.device)
 
         return x / max_len
@@ -159,7 +159,7 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
 
     def _normal_latent_distribution(self, s: torch.Tensor) -> torch.distributions.Distribution:
         mu = s[..., 0]
-        sigma = torch.F.softplus(s[..., 1])
+        sigma = F.softplus(s[..., 1])
         return torch.distributions.Independent(
             torch.distributions.Normal(loc=mu, scale=sigma), 2) # we have two output axes: B x Z_dim
 
