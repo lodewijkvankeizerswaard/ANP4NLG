@@ -38,3 +38,17 @@ The MaskGAN consists of a reinforcement learning based generative network, and a
 - ------------------------------------------------------------------------------------------------------------------- 
 - We finished the draft version for the Introductio. As of now we are still working on the Related work and Approach section. We are aiming to have it finished this week. 
 - We managed to implement (original) Neural Processes, loss goes down yahy! Now we are adding attention as well. As of now training takes 1 epoch takes 13 minutes with a very basic NLP.
+
+## Takeaways of meeting 2
+- Review Submission on Monday 30th
+- Final submission on Monday June 6th 
+- 2 days to review Tuesday and wednesday: deadline on Wednesday June 1st. 
+- Poster presentation on the Thursday. NOT GRADED.
+- Updated the TAs:
+- cross attention typically: project queries keys and values to same dimension: either with a matrix or MLP. 
+- Discussion on MLM vs SC. Could be but than the MLM part needs to have an indication of when to stop. 
+- Atypical to model ... embeddings instead of discrete space. STICK WITH CATEGORICAL distribution. 
+- related work: focus on architecture of NP and ANP and then go on with what has been done with masked language modelling: VAEs, ...
+- NP statistical paradigm approach.. However, transformers are not entirely relevant. 
+- ANP wuould be better due to differences between domains of wikipedia articles. 
+- Compare convergence speed of ANP and NP.... 
