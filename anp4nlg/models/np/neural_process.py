@@ -129,6 +129,10 @@ class NeuralProcess(BaseFairseqModel):
 
         x = self.positional_embedder(src_lengths)
         y = self.word_embedder(src_tokens)
+
+        print('X SHAPE', x.shape)
+        print('Y SHAPE', y.shape)
+
         x_context, y_context, x_target, y_target = context_target_split(x, y)
         # x_context.to(self.device)
         # y_context.to(self.device)
