@@ -52,3 +52,7 @@ The MaskGAN consists of a reinforcement learning based generative network, and a
 - NP statistical paradigm approach.. However, transformers are not entirely relevant. 
 - ANP wuould be better due to differences between domains of wikipedia articles. 
 - Compare convergence speed of ANP and NP.... 
+
+
+## Meeting 3 Tuesday 
+- do not want to mirror related work section from original NP paper. Because we are NOT looking at those models when comparing. 
