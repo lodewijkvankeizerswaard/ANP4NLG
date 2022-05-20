@@ -1,8 +1,9 @@
-from os import W_OK
 import torch
 import torch.nn as nn
+import numpy as np
 
 from typing import Union
+from .util import ReshapeLast
 
 class Aggregator(nn.Module):
     """
@@ -43,14 +44,28 @@ class MeanAggregator(Aggregator):
         return torch.mean(r_i, dim=1)
 
 class AttentionAggregator(Aggregator):
-    def __init__(self, x_dim: int, r_dim: Union[int, tuple]):
+    def __init__(self, x_dim: int, r_dim: Union[int, tuple], h_dim):
         super().__init__(x_dim, r_dim)
-        # Attention with single head
-        self.attn = nn.MultiheadAttention(self.r_dim[0], 1, batch_first=True, vdim=20, kdim=1)
+
+        output_shape = r_dim
+        output_size = np.prod(output_shape)
+        layers = [nn.Linear(x_dim, h_dim),
+                  nn.ReLU(inplace=True),
+                  nn.Linear(h_dim, h_dim),
+                  nn.ReLU(inplace=True),
+                  nn.Linear(h_dim, output_size),
+                  ReshapeLast(output_shape)]
+
+        self.batch_mlp = nn.Sequential(*layers)
+        self.attn = nn.MultiheadAttention(1, 1, batch_first=True, vdim=20, kdim=1)
 
     def forward(self, r_i: torch.Tensor, x_context: torch.Tensor, x_target: torch.Tensor) -> torch.Tensor:
         # TODO check dimension for mean aggregator
         
-        print("Query (x_target) shape :", x_target.shape)
-        print("Key (x_context), Value (r_i) shapes", x_context.shape, r_i.squeeze(-1).shape)
-        return self.attn(x_target, x_context, r_i.squeeze(-1))[0]
+        k = self.batch_mlp(x_context)
+        q = self.batch_mlp(x_target)
+        v = r_i.squeeze(-1)
+
+        print("Query (x_target) shape :", q.shape)
+        print("Key (x_context), Value (r_i) shapes", k.shape, v.shape)
+        return self.attn(q, k, v)[0]
