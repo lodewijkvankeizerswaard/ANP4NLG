@@ -38,7 +38,7 @@ class MeanAggregator(Aggregator):
     def __init__(self, x_dim: int, r_dim: Union[int, tuple]):
         super().__init__(x_dim, r_dim)
 
-    def forward(self, r_i: torch.Tensor, x_context: torch.Tensor=None, x_target: torch.Tensor=None) -> torch.Tensor:
+    def forward(self, r_i: torch.Tensor) -> torch.Tensor:
         # TODO check dimension for mean aggregator
         return torch.mean(r_i, dim=1)
 
@@ -46,11 +46,11 @@ class AttentionAggregator(Aggregator):
     def __init__(self, x_dim: int, r_dim: Union[int, tuple]):
         super().__init__(x_dim, r_dim)
         # Attention with single head
-        self.attn = nn.MultiheadAttention(self.r_dim[1], 1, batch_first=True)
+        self.attn = nn.MultiheadAttention(self.r_dim[0], 1, batch_first=True, vdim=20, kdim=1)
 
     def forward(self, r_i: torch.Tensor, x_context: torch.Tensor, x_target: torch.Tensor) -> torch.Tensor:
         # TODO check dimension for mean aggregator
         
         print("Query (x_target) shape :", x_target.shape)
-        print("Key (x_context), Value (r_i) shapes", x_context.shape, r_i.shape)
-        return self.attn(x_target, x_context, r_i)[0]
+        print("Key (x_context), Value (r_i) shapes", x_context.shape, r_i.squeeze(-1).shape)
+        return self.attn(x_target, x_context, r_i.squeeze(-1))[0]

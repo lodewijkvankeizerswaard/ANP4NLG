@@ -92,7 +92,7 @@ class NeuralProcess(BaseFairseqModel):
                 AttentionEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
                 AttentionAggregator(X_DIM, R_DIM),
                 AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
-                AttentionAggregator(X_DIM, S_DIM),
+                MeanAggregator(X_DIM, S_DIM),
                 NormalLatentDistribution(Z_DIM, S_DIM),
                 MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM)
             )
@@ -146,6 +146,8 @@ class NeuralProcess(BaseFairseqModel):
         # _, num_target, _ = x_target.size()
         # _, _, y_dim = y_context.size()
 
+        print("Latent Aggregator", self.latent_aggregator)
+
         x = self.positional_embedder(src_lengths)
         y = self.word_embedder(src_tokens)
         
@@ -163,12 +165,16 @@ class NeuralProcess(BaseFairseqModel):
             r_i = self.deterministic_encoder(x_context, y_context)
             s_i_context = self.latent_encoder(x_context, y_context)
 
-            print("r_i, s_i_context")
-            print(r_i.shape, s_i_context.shape)
+            # print("r_i, s_i_context")
+            # print(r_i.shape, s_i_context.shape)
 
             # Construct context vector and latent context distribution
             r_context = self.deterministic_aggregator(r_i, x_context, x_target)
+            print("r_context.shape")
+            print(r_context.shape)
             s_context = self.latent_aggregator(s_i_context)
+            print("s_context.shape")
+            print(s_context.shape)
             q_context = self.latent_distribution(s_context)
 
             # print("r_context, s_context, q_context")
