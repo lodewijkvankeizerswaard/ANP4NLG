@@ -21,7 +21,7 @@ class Aggregator(nn.Module):
         self.x_dim = x_dim
         self.r_dim = r_dim if isinstance(r_dim, tuple) else (r_dim, 1)
 
-    def forward(self, r_i: torch.Tensor) -> torch.Tensor:
+    def forward(self, r_i: torch.Tensor, x_context: torch.Tensor, x_target: torch.Tensor) -> torch.Tensor:
         """
         Aggregates representations r_i or paramters s_i into into a single
         representation or parameter set.
@@ -38,7 +38,7 @@ class MeanAggregator(Aggregator):
     def __init__(self, x_dim: int, r_dim: Union[int, tuple]):
         super().__init__(x_dim, r_dim)
 
-    def forward(self, r_i: torch.Tensor) -> torch.Tensor:
+    def forward(self, r_i: torch.Tensor, x_context: torch.Tensor=None, x_target: torch.Tensor=None) -> torch.Tensor:
         # TODO check dimension for mean aggregator
         return torch.mean(r_i, dim=1)
 
