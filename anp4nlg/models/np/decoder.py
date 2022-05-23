@@ -79,5 +79,4 @@ class MLPDecoder(Decoder):
         # TODO make output distr. modular
         logits = self.h_to_dict(out)
 
-        # return mu, sigma
-        return td.Categorical(logits=logits)
+        return logits
