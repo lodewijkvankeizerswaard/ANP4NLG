@@ -56,7 +56,7 @@ class NeuralProcessCriterion(FairseqCriterion):
         src_tokens = sample['net_input']['src_tokens']
         y_target = sample["target"]
 
-        net_out = model(src_tokens)
+        net_out = model(src_tokens)[0]
         p_y_pred = net_out['y_pred']
         q_target = net_out['q_target']
         q_context = net_out['q_context']

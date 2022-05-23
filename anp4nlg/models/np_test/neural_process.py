@@ -108,7 +108,7 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
 
             x_context, y_context, x_target, y_target = self._context_target_split(x, y)
         else:
-            x = self._encode_positions(torch.cat((prev_output_tokens, torch.zeros((bsize, 1))), dim=1))
+            x = self._encode_positions(torch.cat((prev_output_tokens, torch.zeros((bsize, 1)).to(self.device)), dim=1))
             y_context = self.embedding(prev_output_tokens)
             x_context = x[:, :-1, :]
             x_target = x[:, -1:, :]
@@ -242,6 +242,13 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         sigma = F.softplus(s[..., 1])
         return torch.distributions.Independent(
             torch.distributions.Normal(loc=mu, scale=sigma), 2) # we have two output axes: B x Z_dim
+    
+    @property
+    def device(self):
+        """
+        Returns the device on which the model is. Can be useful in some situations.
+        """
+        return next(self.parameters()).device
 
 
 @register_model('neural_process')
