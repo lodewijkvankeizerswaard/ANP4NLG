@@ -11,6 +11,7 @@ fairseq-train data-bin/wikitext-103 \
     --clip-norm 0.0 \
     --lr 0.0005 \
     --lr-scheduler inverse_sqrt \
+    --disable-validation \
     --warmup-updates 4000 \
     --warmup-init-lr 1e-07 \
     --tokens-per-sample 512 \
