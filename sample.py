@@ -1,8 +1,8 @@
-from anp4nlg.models.np_test.neural_process import NeuralProcess
+from anp4nlg.models.np.neural_process import NeuralProcess
 
 en_lm = NeuralProcess.from_pretrained(
     'checkpoints/transformer_wikitext-103',
-    checkpoint_file='checkpoint_best.pt',
+    checkpoint_file='checkpoint_last.pt',
     data_name_or_path='data-bin/wikitext-103'
 )
 

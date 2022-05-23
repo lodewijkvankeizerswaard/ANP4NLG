@@ -114,6 +114,7 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         super(NeuralProcessDecoder, self).__init__(dictionary)
         self.positional_embedder = positional_embedder
         self.word_embedder = word_embedder
+        self.embedding = word_embedder
         self.deterministic_encoder = deterministic_encoder
         self.deterministic_aggregator = deterministic_aggregator
         self.latent_encoder = latent_encoder
@@ -124,10 +125,6 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
     @property
     def supported_targets(self):
         return {"self"}
-
-
-
-    
 
     def forward(
         self,
@@ -190,7 +187,7 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         # Construct context vector and latent context distribution
         r_context = self.deterministic_aggregator(r_i_context, x_context, x_target)
         s_context = self.latent_aggregator(s_i_context)
-        s_target = self.latent_aggregator(s_i_target)
+        s_target = self.latent_aggregator(s_i_target) if self.training else None
 
         # Generate q distributions for context and target inputs
         q_context = self._normal_latent_distribution(s_context)
@@ -219,6 +216,10 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         """Get normalized probabilities (or log probs) from a net's output."""
         probs =  net_output / net_output.sum()
         return probs if log_probs else torch.log(probs)
+
+    def _encode_positions(self, tokens):
+        x = self.positional_embedder(tokens)
+        return x
 
     @property
     def device(self):
