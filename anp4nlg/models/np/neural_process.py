@@ -88,7 +88,7 @@ class NeuralProcess(BaseFairseqModel):
                     padding_idx=task.dictionary.pad(),
                 ),
                 AttentionEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
-                AttentionAggregator(X_DIM, R_DIM),
+                AttentionAggregator(X_DIM, R_DIM, H_DIM),
                 AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
                 MeanAggregator(X_DIM, S_DIM),
                 NormalLatentDistribution(Z_DIM, S_DIM),
@@ -152,8 +152,8 @@ class NeuralProcess(BaseFairseqModel):
             r_i = self.deterministic_encoder(x_context, y_context)
             s_i_context = self.latent_encoder(x_context, y_context)
 
-            # print("r_i, s_i_context")
-            # print(r_i.shape, s_i_context.shape)
+            print("r_i, s_i_context")
+            print(r_i.shape, s_i_context.shape)
 
             # Construct context vector and latent context distribution
             r_context = self.deterministic_aggregator(r_i, x_context, x_target)
