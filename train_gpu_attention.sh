@@ -4,6 +4,7 @@ fairseq-train data-bin/wikitext-103 \
     --task language_modeling \
     --self-target --attentive\
     --save-dir checkpoints/transformer_wikitext-103 \
+    --checkpoint-suffix _attention \
     --arch neural_process_lm  --user-dir anp4nlg \
     --optimizer adam \
     --adam-betas '(0.9, 0.98)' \
