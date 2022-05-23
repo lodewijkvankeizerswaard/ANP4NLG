@@ -66,7 +66,5 @@ class AttentionAggregator(Aggregator):
         k = self.batch_mlp(x_context)
         q = self.batch_mlp(x_target)
         v = r_i.squeeze(-1)
-
-        print("Query (x_target) shape :", q.shape)
-        print("Key (x_context), Value (r_i) shapes", k.shape, v.shape)
+        
         return self.attn(q, k, v)[0]
