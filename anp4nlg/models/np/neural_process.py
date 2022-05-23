@@ -215,8 +215,8 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
     ):
         """Get normalized probabilities (or log probs) from a net's output."""
         y_pred, _ = net_output
-        probs =  y_pred / y_pred.sum()
-        return probs if log_probs else torch.log(probs)
+        y_pred_probs = torch.distributions.Categorical(logits=y_pred).probs
+        return y_pred_probs if not log_probs else torch.log(y_pred_probs)
 
     def _encode_positions(self, tokens):
         x = self.positional_embedder(tokens)

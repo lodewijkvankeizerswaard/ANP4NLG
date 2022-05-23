@@ -8,6 +8,6 @@ en_lm = NeuralProcess.from_pretrained(
 
 en_lm.eval()
 
-sampled_text = en_lm.sample('Barak Obama', beam=1, sampling=True, sampling_topk=10)
+sampled_text = en_lm.sample('The building and the surrounding park', beam=1, sampling=True, sampling_topk=10)
 
 print(sampled_text)
