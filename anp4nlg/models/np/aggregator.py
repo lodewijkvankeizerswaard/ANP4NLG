@@ -36,12 +36,12 @@ class Aggregator(nn.Module):
         raise NotImplementedError("Abstract method.")
 
 class MeanAggregator(Aggregator):
-    def __init__(self, x_dim: int, r_dim: Union[int, tuple]):
-        super().__init__(x_dim, r_dim)
+    def __init__(self, x_dim: int, rs_dim: Union[int, tuple]):
+        super().__init__(x_dim, rs_dim)
 
-    def forward(self, r_i: torch.Tensor, x_context: torch.Tensor=None, x_target: torch.Tensor=None) -> torch.Tensor:
+    def forward(self, rs_i: torch.Tensor, x_context: torch.Tensor=None, x_target: torch.Tensor=None) -> torch.Tensor:
         # TODO check dimension for mean aggregator
-        return torch.mean(r_i, dim=1)
+        return torch.mean(rs_i, dim=1)
 
 class AttentionAggregator(Aggregator):
     def __init__(self, x_dim: int, r_dim: Union[int, tuple], h_dim):
@@ -49,15 +49,16 @@ class AttentionAggregator(Aggregator):
 
         output_shape = r_dim
         output_size = np.prod(output_shape)
+
         layers = [nn.Linear(x_dim, h_dim),
                   nn.ReLU(inplace=True),
                   nn.Linear(h_dim, h_dim),
                   nn.ReLU(inplace=True),
-                  nn.Linear(h_dim, output_size),
-                  ReshapeLast(output_shape)]
+                  nn.Linear(h_dim, output_size)]
 
         self.batch_mlp = nn.Sequential(*layers)
-        self.attn = nn.MultiheadAttention(1, 1, batch_first=True, vdim=20, kdim=1)
+
+        self.attn = nn.MultiheadAttention(output_size, 1, batch_first=True)
 
     def forward(self, r_i: torch.Tensor, x_context: torch.Tensor, x_target: torch.Tensor) -> torch.Tensor:
         # TODO check dimension for mean aggregator
@@ -65,7 +66,5 @@ class AttentionAggregator(Aggregator):
         k = self.batch_mlp(x_context)
         q = self.batch_mlp(x_target)
         v = r_i.squeeze(-1)
-
-        print("Query (x_target) shape :", q.shape)
-        print("Key (x_context), Value (r_i) shapes", k.shape, v.shape)
+        
         return self.attn(q, k, v)[0]

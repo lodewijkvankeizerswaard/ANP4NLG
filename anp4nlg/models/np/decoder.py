@@ -60,17 +60,17 @@ class MLPDecoder(Decoder):
 
     def forward(self, x_target: torch.Tensor, r_c: torch.Tensor, z: torch.Tensor) -> tuple:
         batch_size, num_points, _ = x_target.size()
-        # print("Z shape:", z.shape)
-        # Repeat r_c, so it can be concatenated with every x. This changes shape
-        # from (batch_size, r_dim, 1) to (batch_size, num_points, r_dim)
-        r_c = r_c.unsqueeze(1).squeeze(-1).repeat(1, num_points, 1)
+        
+
+        # Check if sequence lengths are not equal
+        if r_c.shape[1] != x_target.shape[1]:
+            # Repeat r_c, so it can be concatenated with every x. This changes shape
+            # from (batch_size, r_dim, 1) to (batch_size, num_points, r_dim)
+            r_c = r_c.unsqueeze(1).squeeze(-1).repeat(1, num_points, 1)
+
         # Repeat z, so it can be concatenated with every x. This changes shape
         # from (batch_size, z_dim) to (batch_size, num_points, z_dim)
         z = z.unsqueeze(1).repeat(1, num_points, 1)
-
-        # print("decoder.x", x_target.shape)
-        # print("decoder.r_c", r_c.shape)
-        # print("decoder.z", z.shape)
 
         # Concatenate x_target, r_c, and z and pass them through the mlp
         inp = torch.cat((x_target, r_c, z), dim=-1)
