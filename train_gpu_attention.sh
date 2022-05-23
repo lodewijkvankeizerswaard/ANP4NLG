@@ -20,6 +20,7 @@ fairseq-train data-bin/wikitext-103 \
     --max-tokens 2048 \
     --update-freq 16 \
     --max-update 50000 \
-    --batch-size 32\
+    --batch-size 32 \
+    --tensorboard-logdir tb-logs \
     --criterion neural_process
 
