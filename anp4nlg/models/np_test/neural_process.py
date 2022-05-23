@@ -59,7 +59,9 @@ class MLPDecoder(nn.Module):
         out = self.xrz_to_h(inp)
         logits = self.h_to_dict(out)
 
-        return torch.distributions.Categorical(logits=logits)
+        # The logits returned by the decoder are the parameters of a
+        # Categorical distribution over the entire vocabulary.
+        return logits
 
 
 class NeuralProcessDecoder(FairseqIncrementalDecoder):
@@ -94,60 +96,110 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         src_lengths: Optional[Any] = None,
         return_all_hiddens: bool = False,
     ):
+        bsize = prev_output_tokens.shape[0]
+
+        x_context, y_context, x_target, y_target = None, None, None, None
+
+        # Initialise context and targets points depending on whether
+        # performing training or inference
         if self.training:
             x = self._encode_positions(prev_output_tokens)
             y = self.embedding(prev_output_tokens)
 
             x_context, y_context, x_target, y_target = self._context_target_split(x, y)
-
-            # Encode context via deterministic and latent path
-            r_i = self.deterministic_encoder(x_context, y_context)
-            s_i_context = self.latent_encoder(x_context, y_context)
-
-            # Construct context vector and latent context distribution
-            r_context = torch.mean(r_i, dim=1)
-            s_context = torch.mean(s_i_context, dim=1)
-            q_context = self._normal_latent_distribution(s_context)
-
-            # Encode targets and construct latent target distribution
-            s_i_target = self.latent_encoder(x_target, y_target)
-            s_target = torch.mean(s_i_target, dim=1)
-            q_target = self._normal_latent_distribution(s_target)
-
-            # Sample z
-            z_context = q_context.sample()
-
-            # Decode 
-            p_y_pred = self.decoder(x_target, r_context, z_context)
-
-            return p_y_pred, q_target, q_context
         else:
-            bsize = prev_output_tokens.shape[0]
             x = self._encode_positions(torch.cat((prev_output_tokens, torch.zeros((bsize, 1))), dim=1))
             y_context = self.embedding(prev_output_tokens)
             x_context = x[:, :-1, :]
             x_target = x[:, -1:, :]
 
-            # Encode context via deterministic and latent path
-            r_i = self.deterministic_encoder(x_context, y_context)
-            s_i_context = self.latent_encoder(x_context, y_context)
 
-            # Construct context vector and latent context distribution
-            r_context = torch.mean(r_i, dim=1)
-            s_context = torch.mean(s_i_context, dim=1)
-            q_context = self._normal_latent_distribution(s_context)
+        # Encode context via deterministic and latent path
+        r_i_context = self.deterministic_encoder(x_context, y_context)
+        s_i_context = self.latent_encoder(x_context, y_context)
+        s_i_target = self.latent_encoder(x_target, y_target) if self.training else None
 
-            # Sample z
-            z_context = q_context.sample()
+        # Aggregate
+        r_context = torch.mean(r_i_context, dim=1)
+        s_context = torch.mean(s_i_context, dim=1)
+        s_target = torch.mean(s_i_target, dim=1) if self.training else None
 
-            # Decode 
-            p_y_pred = self.decoder(x_target, r_context, z_context)
+        # Generate q distributions for context and target inputs
+        q_context = self._normal_latent_distribution(s_context)
+        q_target = self._normal_latent_distribution(s_target) if self.training else None
 
-            sampled_token = p_y_pred.sample()
+        # Sample latent variable z from from context distribution
+        z_context = q_context.sample()
 
-            return [
-                F.one_hot(sampled_token, num_classes=len(self.dictionary)).float()
-            ]
+        # Decode
+        y_pred = self.decoder(x_target, r_context, z_context)
+
+        return [{'y_pred': y_pred, 'q_context': q_context, 'q_target': q_target}]
+
+        # if self.training:
+        #     x = self._encode_positions(prev_output_tokens)
+        #     y = self.embedding(prev_output_tokens)
+
+        #     x_context, y_context, x_target, y_target = self._context_target_split(x, y)
+
+        #     # Encode context via deterministic and latent path
+        #     r_i = self.deterministic_encoder(x_context, y_context)
+        #     s_i_context = self.latent_encoder(x_context, y_context)
+
+        #     # Construct context vector and latent context distribution
+        #     r_context = torch.mean(r_i, dim=1)
+        #     s_context = torch.mean(s_i_context, dim=1)
+        #     q_context = self._normal_latent_distribution(s_context)
+
+        #     # Encode targets and construct latent target distribution
+        #     s_i_target = self.latent_encoder(x_target, y_target)
+        #     s_target = torch.mean(s_i_target, dim=1)
+        #     q_target = self._normal_latent_distribution(s_target)
+
+        #     # Sample z
+        #     z_context = q_context.sample()
+
+        #     # Decode 
+        #     p_y_pred = self.decoder(x_target, r_context, z_context)
+
+        #     return p_y_pred, q_target, q_context
+        # else:
+        #     bsize = prev_output_tokens.shape[0]
+        #     x = self._encode_positions(torch.cat((prev_output_tokens, torch.zeros((bsize, 1))), dim=1))
+        #     y_context = self.embedding(prev_output_tokens)
+        #     x_context = x[:, :-1, :]
+        #     x_target = x[:, -1:, :]
+
+        #     # Encode context via deterministic and latent path
+        #     r_i = self.deterministic_encoder(x_context, y_context)
+        #     s_i_context = self.latent_encoder(x_context, y_context)
+
+        #     # Construct context vector and latent context distribution
+        #     r_context = torch.mean(r_i, dim=1)
+        #     s_context = torch.mean(s_i_context, dim=1)
+        #     q_context = self._normal_latent_distribution(s_context)
+
+        #     # Sample z
+        #     z_context = q_context.sample()
+
+        #     # Decode 
+        #     p_y_pred = self.decoder(x_target, r_context, z_context)
+
+        #     sampled_token = p_y_pred.sample()
+
+        #     return [
+        #         F.one_hot(sampled_token, num_classes=len(self.dictionary)).float()
+        #     ]
+
+    def get_normalized_probs(
+        self,
+        net_output: Tuple[torch.Tensor, Optional[Dict[str, List[Optional[torch.Tensor]]]]],
+        log_probs: bool,
+        sample: Optional[Dict[str, torch.Tensor]] = None,
+    ):
+        """Get normalized probabilities (or log probs) from a net's output."""
+        probs =  net_output / net_output.sum()
+        return probs if log_probs else torch.log(probs)
 
     def _encode_positions(self, tokens):
         batch_size = tokens.shape[0]
