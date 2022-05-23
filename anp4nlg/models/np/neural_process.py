@@ -199,7 +199,7 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         # Decode
         y_pred = self.decoder(x_target, r_context, z_context)
 
-        return [{'y_pred': y_pred, 'q_context': q_context, 'q_target': q_target}]
+        return y_pred, None, q_context, q_target
 
     def _normal_latent_distribution(self, s: torch.Tensor) -> torch.distributions.Distribution:
         mu = s[..., 0]
@@ -214,7 +214,8 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         sample: Optional[Dict[str, torch.Tensor]] = None,
     ):
         """Get normalized probabilities (or log probs) from a net's output."""
-        probs =  net_output / net_output.sum()
+        y_pred, _ = net_output
+        probs =  y_pred / y_pred.sum()
         return probs if log_probs else torch.log(probs)
 
     def _encode_positions(self, tokens):
