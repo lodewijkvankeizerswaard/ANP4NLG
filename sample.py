@@ -1,5 +1,4 @@
-import torch
-from anp4nlg.models.np.neural_process import NeuralProcess
+from anp4nlg.models.np_test.neural_process import NeuralProcess
 
 en_lm = NeuralProcess.from_pretrained(
     'checkpoints/transformer_wikitext-103',
@@ -9,4 +8,6 @@ en_lm = NeuralProcess.from_pretrained(
 
 en_lm.eval()
 
-en_lm.sample('Barack Obama', beam=1, sampling=True, sampling_topk=10, temperature=0.8)
+sampled_text = en_lm.sample('Barak Obama', beam=1, sampling=True, sampling_topk=10, temperature=0.8)
+
+print(sampled_text)

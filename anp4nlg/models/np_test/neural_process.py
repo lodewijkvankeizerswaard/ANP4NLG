@@ -94,32 +94,60 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         src_lengths: Optional[Any] = None,
         return_all_hiddens: bool = False,
     ):
-        x = self._encode_positions(prev_output_tokens)
-        y = self.embedding(prev_output_tokens)
+        if self.training:
+            x = self._encode_positions(prev_output_tokens)
+            y = self.embedding(prev_output_tokens)
 
-        x_context, y_context, x_target, y_target = self._context_target_split(x, y)
+            x_context, y_context, x_target, y_target = self._context_target_split(x, y)
 
-        # Encode context via deterministic and latent path
-        r_i = self.deterministic_encoder(x_context, y_context)
-        s_i_context = self.latent_encoder(x_context, y_context)
+            # Encode context via deterministic and latent path
+            r_i = self.deterministic_encoder(x_context, y_context)
+            s_i_context = self.latent_encoder(x_context, y_context)
 
-        # Construct context vector and latent context distribution
-        r_context = torch.mean(r_i, dim=1)
-        s_context = torch.mean(s_i_context, dim=1)
-        q_context = self._normal_latent_distribution(s_context)
+            # Construct context vector and latent context distribution
+            r_context = torch.mean(r_i, dim=1)
+            s_context = torch.mean(s_i_context, dim=1)
+            q_context = self._normal_latent_distribution(s_context)
 
-        # Encode targets and construct latent target distribution
-        s_i_target = self.latent_encoder(x_target, y_target)
-        s_target = torch.mean(s_i_target, dim=1)
-        q_target = self._normal_latent_distribution(s_target)
+            # Encode targets and construct latent target distribution
+            s_i_target = self.latent_encoder(x_target, y_target)
+            s_target = torch.mean(s_i_target, dim=1)
+            q_target = self._normal_latent_distribution(s_target)
 
-        # Sample z
-        z_context = q_context.sample()
+            # Sample z
+            z_context = q_context.sample()
 
-        # Decode 
-        p_y_pred = self.decoder(x_target, r_context, z_context)
+            # Decode 
+            p_y_pred = self.decoder(x_target, r_context, z_context)
 
-        return p_y_pred, q_target, q_context
+            return p_y_pred, q_target, q_context
+        else:
+            bsize = prev_output_tokens.shape[0]
+            x = self._encode_positions(torch.cat((prev_output_tokens, torch.zeros((bsize, 1))), dim=1))
+            y_context = self.embedding(prev_output_tokens)
+            x_context = x[:, :-1, :]
+            x_target = x[:, -1:, :]
+
+            # Encode context via deterministic and latent path
+            r_i = self.deterministic_encoder(x_context, y_context)
+            s_i_context = self.latent_encoder(x_context, y_context)
+
+            # Construct context vector and latent context distribution
+            r_context = torch.mean(r_i, dim=1)
+            s_context = torch.mean(s_i_context, dim=1)
+            q_context = self._normal_latent_distribution(s_context)
+
+            # Sample z
+            z_context = q_context.sample()
+
+            # Decode 
+            p_y_pred = self.decoder(x_target, r_context, z_context)
+
+            sampled_token = p_y_pred.sample()
+
+            return [
+                F.one_hot(sampled_token, num_classes=len(self.dictionary)).float()
+            ]
 
     def _encode_positions(self, tokens):
         batch_size = tokens.shape[0]
