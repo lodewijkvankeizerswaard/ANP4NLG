@@ -9,7 +9,7 @@ fairseq-train data-bin/wikitext-103 \
     --adam-betas '(0.9, 0.98)' \
     --weight-decay 0.01 \
     --clip-norm 0.0 \
-    --lr 0.0005 \
+    --lr 0.001 \
     --lr-scheduler inverse_sqrt \
     --disable-validation \
     --warmup-updates 4000 \
