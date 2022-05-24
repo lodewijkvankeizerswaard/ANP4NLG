@@ -1,6 +1,7 @@
 #!/bin/bash
 
 fairseq-train data-bin/wikitext-103 \
+    --attentive \
     --task language_modeling \
     --self-target \
     --save-dir checkpoints/transformer_wikitext-103 \
