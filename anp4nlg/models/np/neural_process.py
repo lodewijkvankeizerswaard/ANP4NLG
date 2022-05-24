@@ -23,8 +23,12 @@ class NeuralProcess(FairseqLanguageModel):
         parser.add_argument('--positional-embedding-len', type=int, default=-1, 
                             help="the maximum sentence length to divide the positional embedding over;"
                             " -1 use maximum sentence length per batch (default: -1)")
-        parser.add_argument('--word_embedding_dim', type=int, default=300,
+        parser.add_argument('--word_embedding_dim', type=int, default=128,
                             help="the dimensionality of the word embeddings")
+        parser.add_argument('--r_dim', type=int, default=128)
+        parser.add_argument('--s_dim', type=int, default=128)
+        parser.add_argument('--h_dim', type=int, default=128)
+        parser.add_argument('--z_dim', type=int, default=128)
         parser.add_argument('--attentive', default=False, action='store_true')
     
     @classmethod
@@ -39,10 +43,10 @@ class NeuralProcess(FairseqLanguageModel):
 
         X_DIM = 1
         Y_DIM = args.word_embedding_dim
-        R_DIM = 20
-        S_DIM = (20, 2)
-        H_DIM = 20
-        Z_DIM = 20
+        R_DIM = args.r_dim
+        S_DIM = (args.s_dim, 2)
+        H_DIM = args.h_dim
+        Z_DIM = args.z_dim
             
         if args.attentive:
             model = NeuralProcessDecoder(
