@@ -25,10 +25,10 @@ def context_target_split(x, y):
     locations = np.random.choice(num_points,
                                  size=num_context + num_extra_target,
                                  replace=False)
-    x_context = x[:, locations[:num_context], :]
-    y_context = y[:, locations[:num_context], :]
-    x_target = x[:, locations, :]
-    y_target = y[:, locations, :]
+    x_context = x[:, :-1, :]
+    y_context = y[:, :-1, :]
+    x_target = x
+    y_target = y
     return x_context, y_context, x_target, y_target
 
 class ReshapeLast(nn.Module):
