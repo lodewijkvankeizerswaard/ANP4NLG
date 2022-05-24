@@ -69,8 +69,8 @@ class NeuralProcess(FairseqLanguageModel):
                 assert ValueError("{} is not available as pretrained word embedding".format(args.word_embeddings))
             pt = gensim.downloader.load(pt_text)
             embedding.weight.requires_grad = False
-            for w, i in a.indices.items():
-                emb = torch.Tensor(pt[i]) if i in pt else torch.randn((300))
+            for w, i in task.dictionary.indices.items():
+                emb = torch.Tensor(pt[w].copy()) if w in pt else torch.randn((300))
                 embedding.weight[i, :] = emb
             embedding.weight.requires_grad = True
 
