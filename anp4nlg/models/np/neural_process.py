@@ -42,7 +42,7 @@ class NeuralProcess(FairseqLanguageModel):
         # TODO implement some form of control over the masking behaviour during training
         # TODO expose control over more dimensionalities in the command line tool
 
-        X_DIM = 128
+        X_DIM = args.word_embedding_dim
         Y_DIM = args.word_embedding_dim
         R_DIM = args.r_dim
         S_DIM = (args.s_dim, 2)
