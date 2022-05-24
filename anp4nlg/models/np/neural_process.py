@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from fairseq.models import FairseqIncrementalDecoder, FairseqLanguageModel, register_model
 from fairseq.models.fairseq_encoder import EncoderOut
+from fairseq.modules import PositionalEmbedding
 from fairseq.data import Dictionary
 
 from .aggregator import Aggregator, MeanAggregator, AttentionAggregator
@@ -41,7 +42,7 @@ class NeuralProcess(FairseqLanguageModel):
         # TODO implement some form of control over the masking behaviour during training
         # TODO expose control over more dimensionalities in the command line tool
 
-        X_DIM = 1
+        X_DIM = 128
         Y_DIM = args.word_embedding_dim
         R_DIM = args.r_dim
         S_DIM = (args.s_dim, 2)
@@ -50,7 +51,11 @@ class NeuralProcess(FairseqLanguageModel):
             
         if args.attentive:
             model = NeuralProcessDecoder(
-                PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
+                PositionalEmbedding(
+                    num_embeddings=len(task.dictionary),
+                    embedding_dim=Y_DIM,
+                    padding_idx=task.dictionary.pad(),
+                ),
                 nn.Embedding(
                     num_embeddings=len(task.dictionary),
                     embedding_dim=Y_DIM,
@@ -66,7 +71,11 @@ class NeuralProcess(FairseqLanguageModel):
             )
         else:
             model = NeuralProcessDecoder(
-                PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
+                PositionalEmbedding(
+                    num_embeddings=len(task.dictionary),
+                    embedding_dim=Y_DIM,
+                    padding_idx=task.dictionary.pad(),
+                ),
                 nn.Embedding(
                     num_embeddings=len(task.dictionary),
                     embedding_dim=Y_DIM,
@@ -232,42 +241,3 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         Returns the device on which the model is. Can be useful in some situations.
         """
         return next(self.parameters()).device
-
-class PositionalEmbedding(nn.Module):
-    """Given a tensor of sample sequence lengths (e.g. sentence lengths), create a 
-    positional embedding for every word, and return these (x-values). Options are:
-    - scalar: scalar between 0 (bos) and 1 (eos).
-    """
-    def __init__(self, embedding: str, max_len: int=-1):
-        """
-        encoding: desired positional embedding
-        """
-        super(PositionalEmbedding, self).__init__()
-        if embedding == "scalar":
-            self.fn = self._scalar_encoding
-        else:
-            print("[warning] \"{}\" not implemented, defaulting to scalar embedding!".format(embedding))
-            self.fn = self._scalar_encoding
-
-        # We need this to be on the same device as the tensors, but we do not want it to be a parameter
-        self.register_buffer('max_len', torch.Tensor([max_len]), persistent=True)
-
-
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        return self.fn(input)
-
-    def _scalar_encoding(self, y: torch.Tensor) -> torch.Tensor:
-        batch_size, max_len = y.shape
-        x = torch.arange(max_len).repeat(batch_size, 1).unsqueeze(-1).to(self.device)
-
-        if self.max_len != -1:
-            return x / self.max_len
-        else:
-            return x / max_len
-
-    @property
-    def device(self):
-        """
-        Returns the device on which the model is. Can be useful in some situations.
-        """
-        return self.max_len.device
