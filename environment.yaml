@@ -7,3 +7,7 @@ dependencies:
   - sacremoses
   - pytorch
   - wandb
+  - pip:
+    - tensorboard
+    - tqdm
+    - tokenizers
