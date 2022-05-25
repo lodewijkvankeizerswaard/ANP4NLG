@@ -4,7 +4,7 @@ source activate anp4nlg_gpu
 
 TEXT=wikitext-103
 
-# python preprocess.py "$TEXT"
+python preprocess.py "$TEXT"
 fairseq-preprocess \
     --only-source \
     --thresholdsrc=2 \

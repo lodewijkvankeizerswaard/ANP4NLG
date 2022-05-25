@@ -25,9 +25,9 @@ for file in files:
     print("Tokenizing file {}".format(file))
     os.rename(file, file+"old")
     with open(file+"old", "r") as f:
-        with open(file, "w") as new_file:
+        with open(file, "a") as new_file:
             for line in f.readlines():
                 output = tokenizer.encode(line).tokens
                 words = ' '.join(output)
-                new_file.write(words)
+                new_file.write(words+'\n')
 
