@@ -5,7 +5,6 @@ fairseq-train data-bin/wikitext-103 \
     --self-target --attentive\
     --save-dir checkpoints/transformer_wikitext-103 \
     --checkpoint-suffix _attention \
-        --word-embeddings word2vec \
     --arch neural_process_lm  --user-dir anp4nlg \
     --optimizer adam \
     --adam-betas '(0.9, 0.98)' \
@@ -21,7 +20,7 @@ fairseq-train data-bin/wikitext-103 \
     --max-tokens 2048 \
     --update-freq 16 \
     --max-update 50000 \
-    --batch-size 16 \
+    --batch-size 32 \
     --tensorboard-logdir tb-logs \
     --criterion neural_process
 
