@@ -7,6 +7,8 @@ from fairseq.models import FairseqIncrementalDecoder, FairseqLanguageModel, regi
 from fairseq.models.fairseq_encoder import EncoderOut
 from fairseq.data import Dictionary
 
+import gensim.downloader
+
 from .aggregator import Aggregator, MeanAggregator, AttentionAggregator
 from .decoder import Decoder, MLPDecoder
 from .encoder import Encoder, MLPEncoder, AttentionEncoder
@@ -30,6 +32,8 @@ class NeuralProcess(FairseqLanguageModel):
         parser.add_argument('--h_dim', type=int, default=128)
         parser.add_argument('--z_dim', type=int, default=128)
         parser.add_argument('--attentive', default=False, action='store_true')
+        parser.add_argument('--word-embeddings', type=str, choices=['new','fasttext', 'word2vec'], default='new',
+                            help="the word embeddings to use; pretrained or new (default: new)")
     
     @classmethod
     def build_model(cls, args, task):
@@ -42,20 +46,39 @@ class NeuralProcess(FairseqLanguageModel):
         # TODO expose control over more dimensionalities in the command line tool
 
         X_DIM = 1
-        Y_DIM = args.word_embedding_dim
+        Y_DIM = args.word_embedding_dim if args.word_embeddings == "new" else 300
         R_DIM = args.r_dim
         S_DIM = (args.s_dim, 2)
         H_DIM = args.h_dim
         Z_DIM = args.z_dim
+
+        embedding = nn.Embedding(
+            num_embeddings=len(task.dictionary),
+            embedding_dim=Y_DIM,
+            padding_idx=task.dictionary.pad(),
+        )
+        
+        if args.word_embeddings == "new":
+            pass
+        else:
+            if args.word_embeddings == "fasttext":
+                pt_text = 'fasttext-wiki-news-subwords-300'
+            elif args.word_embeddings == "word2vec":
+                pt_text = 'word2vec-google-news-300'
+            else:
+                assert ValueError("{} is not available as pretrained word embedding".format(args.word_embeddings))
+            pt = gensim.downloader.load(pt_text)
+            embedding.weight.requires_grad = False
+            for w, i in task.dictionary.indices.items():
+                emb = torch.Tensor(pt[w].copy()) if w in pt else torch.randn((300))
+                embedding.weight[i, :] = emb
+            embedding.weight.requires_grad = True
+
             
         if args.attentive:
             model = NeuralProcessDecoder(
                 PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
-                nn.Embedding(
-                    num_embeddings=len(task.dictionary),
-                    embedding_dim=Y_DIM,
-                    padding_idx=task.dictionary.pad(),
-                ),
+                embedding,
                 AttentionEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
                 AttentionAggregator(X_DIM, R_DIM, H_DIM),
                 AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
@@ -67,11 +90,7 @@ class NeuralProcess(FairseqLanguageModel):
         else:
             model = NeuralProcessDecoder(
                 PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
-                nn.Embedding(
-                    num_embeddings=len(task.dictionary),
-                    embedding_dim=Y_DIM,
-                    padding_idx=task.dictionary.pad(),
-                ),
+                embedding,
                 MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
                 MeanAggregator(X_DIM, R_DIM),
                 MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
