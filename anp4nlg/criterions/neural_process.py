@@ -32,10 +32,10 @@ class NeuralProcessCriterion(FairseqCriterion):
         # Log likelihood has shape (batch_size, num_target, y_dim). Take mean
         # over batch and sum over number of targets and dimensions of y
         log_likelihood = torch.distributions.Categorical(
-            logits=p_y_pred).log_prob(y_target).mean(dim=0).sum()
+            logits=p_y_pred).log_prob(y_target).sum(dim=1).mean()
         # KL has shape (batch_size, r_dim). Take mean over batch and sum over
         # r_dim (since r_dim is dimension of normal distribution)
-        kl = kl_divergence(q_target, q_context).mean(dim=0).sum()
+        kl = kl_divergence(q_target, q_context).sum(dim=1).mean()
         return -log_likelihood + kl
 
     def forward(self, model, sample, reduce=True):
