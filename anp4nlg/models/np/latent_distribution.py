@@ -42,3 +42,13 @@ class NormalLatentDistribution(LatentDistribution):
         mu = s[..., 0]
         sigma = F.softplus(s[..., 1])
         return td.Independent(td.Normal(loc=mu, scale=sigma), 2) # we have two output axes: B x Z_dim
+
+class StdNormalLatentDistribution(LatentDistribution):
+    def __init__(self, z_dim: int, r_dim: tuple):
+        super().__init__(z_dim, r_dim)
+
+    def forward(self, s: torch.Tensor) -> td.Distribution:
+        # TODO check if we need to use registered buffers for Latent distributions
+        mu = s[..., 0]
+        sigma = F.softplus(s[..., 1])
+        return td.Independent(td.Normal(loc=torch.zeros_like(mu), scale=torch.ones_like(sigma)), 2) # we have two output axes: B x Z_dim

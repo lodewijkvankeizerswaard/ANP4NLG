@@ -10,7 +10,7 @@ from fairseq.data import Dictionary
 from .aggregator import Aggregator, MeanAggregator, AttentionAggregator
 from .decoder import Decoder, MLPDecoder
 from .encoder import Encoder, MLPEncoder, AttentionEncoder
-from .latent_distribution import LatentDistribution, NormalLatentDistribution
+from .latent_distribution import LatentDistribution, NormalLatentDistribution, StdNormalLatentDistribution
 from .util import context_target_split
 
 @register_model('neural_process')
@@ -30,6 +30,7 @@ class NeuralProcess(FairseqLanguageModel):
         parser.add_argument('--h_dim', type=int, default=128)
         parser.add_argument('--z_dim', type=int, default=128)
         parser.add_argument('--attentive', default=False, action='store_true')
+        parser.add_argument('--latent_std_normal', default=False, action='store_true')
     
     @classmethod
     def build_model(cls, args, task):
@@ -61,6 +62,22 @@ class NeuralProcess(FairseqLanguageModel):
                 AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
                 MeanAggregator(X_DIM, S_DIM),
                 NormalLatentDistribution(Z_DIM, S_DIM),
+                MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM),
+                dictionary=task.dictionary
+            )
+        if args.latent_std_normal:
+            model = NeuralProcessDecoder(
+                PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
+                nn.Embedding(
+                    num_embeddings=len(task.dictionary),
+                    embedding_dim=Y_DIM,
+                    padding_idx=task.dictionary.pad(),
+                ),
+                AttentionEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
+                AttentionAggregator(X_DIM, R_DIM, H_DIM),
+                AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
+                MeanAggregator(X_DIM, S_DIM),
+                StdNormalLatentDistribution(Z_DIM, S_DIM),
                 MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM),
                 dictionary=task.dictionary
             )
@@ -205,9 +222,13 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
 
         return y_pred, None, q_context, q_target
 
-    def _normal_latent_distribution(self, s: torch.Tensor) -> torch.distributions.Distribution:
-        mu = s[..., 0]
-        sigma = F.softplus(s[..., 1])
+    def _normal_latent_distribution(self, s: torch.Tensor, std_normal=False) -> torch.distributions.Distribution:
+        if std_normal:
+            mu = 0
+            sigma = 1
+        else:
+            mu = s[..., 0]
+            sigma = F.softplus(s[..., 1])
         return torch.distributions.Independent(
             torch.distributions.Normal(loc=mu, scale=sigma), 2) # we have two output axes: B x Z_dim
 
