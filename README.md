@@ -2,7 +2,7 @@
 
 ## Getting started
 
-1. Set up conda environment by running `conda env create --file environment.yaml`
+1. Set up conda environment by running `conda env create --file environment_gpu.yaml`
 2. Download dataset: `./prepare-wikitext-103.sh`
 3. Preprocess dataset by converting it to binary format: `./preprocess.sh`
 4. Train Neural Process language model: `./train.sh`
