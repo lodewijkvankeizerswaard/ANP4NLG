@@ -8,5 +8,4 @@ fairseq-eval-lm data-bin/wikitext-103 \
     --user-dir anp4nlg \
     --self-target \
     --quiet \
-    --results-path perplexity-results.txt \
-    --output-word-stats
+    --results-path perplexity-results.txt
