@@ -6,6 +6,4 @@ fairseq-eval-lm data-bin/wikitext-103 \
     --tokens-per-sample 64 \
     --context-window 63 \
     --user-dir anp4nlg \
-    --self-target \
-    --quiet \
-    --results-path perplexity-results.txt
+    --self-target
