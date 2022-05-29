@@ -11,3 +11,4 @@ dependencies:
     - tensorboard
     - tqdm
     - tokenizers
+    - subword-nmt
