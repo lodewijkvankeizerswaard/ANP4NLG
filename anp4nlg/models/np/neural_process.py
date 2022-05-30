@@ -57,7 +57,7 @@ class NeuralProcess(FairseqLanguageModel):
             embedding_dim=Y_DIM,
             padding_idx=task.dictionary.pad(),
         )
-        
+
         if args.word_embeddings == "new":
             pass
         else:
@@ -74,7 +74,6 @@ class NeuralProcess(FairseqLanguageModel):
                 embedding.weight[i, :] = emb
             embedding.weight.requires_grad = True
 
-            
         if args.attentive:
             model = NeuralProcessDecoder(
                 PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
@@ -180,17 +179,16 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         """
         bsize = prev_output_tokens.shape[0]
         x_context, y_context, x_target, y_target = None, None, None, None
-        
+
         if self.training:
             x = self.positional_embedder(prev_output_tokens)
             y = self.word_embedder(prev_output_tokens)
             x_context, y_context, x_target, y_target = context_target_split(x, y)
-
         else:
             x = self._encode_positions(torch.cat((prev_output_tokens, torch.zeros((bsize, 1)).to(self.device)), dim=1))
             y_context = self.embedding(prev_output_tokens)
             x_context = x[:, :-1, :]
-            x_target = x[:, -1:, :]
+            x_target = x
 
         # x_context : torch.Tensor
         #     Shape (batch_size, num_context, x_dim). Note that x_context is a
@@ -237,9 +235,10 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         sample: Optional[Dict[str, torch.Tensor]] = None,
     ):
         """Get normalized probabilities (or log probs) from a net's output."""
-        y_pred, _ = net_output
-        y_pred_probs = torch.distributions.Categorical(logits=y_pred).probs
-        return y_pred_probs if not log_probs else torch.log(y_pred_probs)
+        y_pred = net_output[0]
+        y_pred_probs = torch.distributions.Categorical(logits=y_pred).probs.type(torch.float)
+        # return y_pred_probs if not log_probs else torch.log(y_pred_probs)
+        return y_pred_probs
 
     def _encode_positions(self, tokens):
         x = self.positional_embedder(tokens)
