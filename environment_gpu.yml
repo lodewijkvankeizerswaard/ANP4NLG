@@ -12,6 +12,7 @@ dependencies:
   - sacremoses
   - wandb
   - gensim
+  - nltk
   - pip:
     - tensorboard
     - tqdm
