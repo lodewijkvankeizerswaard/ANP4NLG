@@ -75,6 +75,10 @@ class NeuralProcess(FairseqLanguageModel):
                 embedding.weight[i, :] = emb
             embedding.weight.requires_grad = True
 
+        latent_distribution = NormalLatentDistribution(Z_DIM, S_DIM)
+        if args.latent_std_normal:
+            latent_distribution = StdNormalLatentDistribution(Z_DIM, S_DIM)
+
         if args.attentive:
             model = NeuralProcessDecoder(
                 PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
@@ -83,23 +87,7 @@ class NeuralProcess(FairseqLanguageModel):
                 AttentionAggregator(X_DIM, R_DIM, H_DIM),
                 AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
                 MeanAggregator(X_DIM, S_DIM),
-                NormalLatentDistribution(Z_DIM, S_DIM),
-                MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM),
-                dictionary=task.dictionary
-            )
-        if args.latent_std_normal:
-            model = NeuralProcessDecoder(
-                PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
-                nn.Embedding(
-                    num_embeddings=len(task.dictionary),
-                    embedding_dim=Y_DIM,
-                    padding_idx=task.dictionary.pad(),
-                ),
-                AttentionEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
-                AttentionAggregator(X_DIM, R_DIM, H_DIM),
-                AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
-                MeanAggregator(X_DIM, S_DIM),
-                StdNormalLatentDistribution(Z_DIM, S_DIM),
+                latent_distribution,
                 MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM),
                 dictionary=task.dictionary
             )
@@ -111,7 +99,7 @@ class NeuralProcess(FairseqLanguageModel):
                 MeanAggregator(X_DIM, R_DIM),
                 MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
                 MeanAggregator(X_DIM, S_DIM),
-                NormalLatentDistribution(Z_DIM, S_DIM),
+                latent_distribution,
                 MLPDecoder(task.target_dictionary, X_DIM, R_DIM, Z_DIM, Y_DIM, H_DIM),
                 dictionary=task.dictionary
             )
