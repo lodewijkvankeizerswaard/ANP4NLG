@@ -1,10 +1,14 @@
-from typing import List, Tuple
-from tqdm import tqdm
+"""Perform BLEU scoring for given model as described in the paper"""
+
+from typing import Dict, List
+
 import torch
+from fairseq import utils
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.translate.bleu_score import sentence_bleu
-from fairseq.data import Dictionary, data_utils_fast
+from tqdm import tqdm
+
 from anp4nlg.models.np.neural_process import NeuralProcess
 
 
@@ -20,12 +24,14 @@ def load_data(path: str='wikitext-103/wiki.test.tokens') -> str:
 
 
 def load_model(
-    path: str='checkpoints/transformer_wikitext-103/checkpoint_last.pt'
+    model_dir: str='checkpoints/transformer_wikitext-103',
+    checkpoint_file: str='checkpoint_sent_len_32.pt',
+    data_dir: str='data-bin/wikitext-103'
 ) -> NeuralProcess:
     lm = NeuralProcess.from_pretrained(
-        'checkpoints/transformer_wikitext-103',
-        checkpoint_file='checkpoint_sent_len_64.pt',
-        data_name_or_path='data-bin/wikitext-103'
+        model_dir,
+        checkpoint_file=checkpoint_file,
+        data_name_or_path=data_dir
     )
 
     lm.eval()
@@ -49,10 +55,14 @@ def genereate_sentence_pairs(
     dataset: torch.Tensor, model: NeuralProcess, context_size: int=21,
     sampling_topk: int=20, no_repeat_ngram_size: int=3, tempearture: int=1.5,
     min_len: int=64
-) -> List[str]:
+) -> List[Dict[str, str]]:
     dictionary = model.models[0].decoder.dictionary
 
-    sentence_pairs = []
+    sentences = []
+
+    def to_string(tokens: torch.Tensor) -> str:
+        return dictionary.string(utils.strip_pad(tokens, dictionary.pad()),
+                                 bpe_symbol="@@ ")
 
     for sentence_tokens in tqdm(dataset):
         context_tokens = sentence_tokens[:context_size]
@@ -68,8 +78,11 @@ def genereate_sentence_pairs(
                 no_repeat_ngram_size=no_repeat_ngram_size, tempearture=tempearture,
                 min_len=min_len)
 
-            sentence_pair = (dictionary.string(target_tokens), pred[min_len:])
-            sentence_pairs.append(sentence_pair)
+            sentences.append({
+                "ctx": to_string(context_tokens),
+                "tgt": to_string(target_tokens),
+                "pred": pred[min_len:],
+            })
 
             num_successful += 1
         except RuntimeError:
@@ -77,10 +90,10 @@ def genereate_sentence_pairs(
 
     print(f'Successful: {num_successful}, failed: {num_failed}, total: {num_successful + num_failed}')
 
-    return sentence_pairs
+    return sentences
 
 
-def score(sentence_pairs: List[Tuple[str, str]]) -> float:
+def score(sentences: List[Dict[str, str]]) -> float:
     stop_words = set(stopwords.words('english'))
     stop_words.update(['.', ',', '"', "'", '?', '!', ':', ';', '(', ')',
                        '[', ']', '{', '}', '<', 'unk', '>', "''"])
@@ -94,18 +107,19 @@ def score(sentence_pairs: List[Tuple[str, str]]) -> float:
     highscore_sentence = ''
     highscore = 0.0
 
-    for reference_str, hypothesis_str in tqdm(sentence_pairs):
-        reference, hypothesis = preprocess(reference_str), preprocess(hypothesis_str)
+    for sentence in tqdm(sentences):
+        reference, hypothesis = preprocess(sentence["tgt"]), preprocess(sentence["pred"])
         score = sentence_bleu([reference], hypothesis, weights=(1, 0))
         scores.append(score)
 
         if score > highscore:
             highscore = score
-            highscore_sentence = (reference_str.replace('\n', ' '), hypothesis_str)
+            highscore_sentence = sentence
 
     print('Highest scoring sentence has score', highscore)
-    print('Highscore sentence reference:', highscore_sentence[0])
-    print('Highscore sentence hypothesis:', highscore_sentence[1])
+    print('Highscore sentence context:', highscore_sentence["ctx"])
+    print('Highscore sentence reference:', highscore_sentence["tgt"])
+    print('Highscore sentence hypothesis:', highscore_sentence["pred"])
 
     return sum(scores) / len(scores)
 
