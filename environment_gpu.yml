@@ -11,7 +11,10 @@ dependencies:
   - fairseq
   - sacremoses
   - wandb
+  - gensim
+  - nltk
   - pip:
     - tensorboard
     - tqdm
     - tokenizers
+    - subword-nmt

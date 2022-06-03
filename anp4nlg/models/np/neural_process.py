@@ -7,6 +7,8 @@ from fairseq.models import FairseqIncrementalDecoder, FairseqLanguageModel, regi
 from fairseq.models.fairseq_encoder import EncoderOut
 from fairseq.data import Dictionary
 
+import gensim.downloader
+
 from .aggregator import Aggregator, MeanAggregator, AttentionAggregator
 from .decoder import Decoder, MLPDecoder
 from .encoder import Encoder, MLPEncoder, AttentionEncoder
@@ -31,6 +33,8 @@ class NeuralProcess(FairseqLanguageModel):
         parser.add_argument('--z_dim', type=int, default=128)
         parser.add_argument('--attentive', default=False, action='store_true')
         parser.add_argument('--latent_std_normal', default=False, action='store_true')
+        parser.add_argument('--word-embeddings', type=str, choices=['new','fasttext', 'word2vec'], default='new',
+                            help="the word embeddings to use; pretrained or new (default: new)")
     
     @classmethod
     def build_model(cls, args, task):
@@ -43,20 +47,38 @@ class NeuralProcess(FairseqLanguageModel):
         # TODO expose control over more dimensionalities in the command line tool
 
         X_DIM = 1
-        Y_DIM = args.word_embedding_dim
+        Y_DIM = args.word_embedding_dim if args.word_embeddings == "new" else 300
         R_DIM = args.r_dim
         S_DIM = (args.s_dim, 2)
         H_DIM = args.h_dim
         Z_DIM = args.z_dim
-            
+
+        embedding = nn.Embedding(
+            num_embeddings=len(task.dictionary),
+            embedding_dim=Y_DIM,
+            padding_idx=task.dictionary.pad(),
+        )
+
+        if args.word_embeddings == "new":
+            pass
+        else:
+            if args.word_embeddings == "fasttext":
+                pt_text = 'fasttext-wiki-news-subwords-300'
+            elif args.word_embeddings == "word2vec":
+                pt_text = 'word2vec-google-news-300'
+            else:
+                assert ValueError("{} is not available as pretrained word embedding".format(args.word_embeddings))
+            pt = gensim.downloader.load(pt_text)
+            embedding.weight.requires_grad = False
+            for w, i in task.dictionary.indices.items():
+                emb = torch.Tensor(pt[w].copy()) if w in pt else torch.randn((300))
+                embedding.weight[i, :] = emb
+            embedding.weight.requires_grad = True
+
         if args.attentive:
             model = NeuralProcessDecoder(
                 PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
-                nn.Embedding(
-                    num_embeddings=len(task.dictionary),
-                    embedding_dim=Y_DIM,
-                    padding_idx=task.dictionary.pad(),
-                ),
+                embedding,
                 AttentionEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
                 AttentionAggregator(X_DIM, R_DIM, H_DIM),
                 AttentionEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
@@ -84,11 +106,7 @@ class NeuralProcess(FairseqLanguageModel):
         else:
             model = NeuralProcessDecoder(
                 PositionalEmbedding(args.positional_embedding, max_len=args.positional_embedding_len),
-                nn.Embedding(
-                    num_embeddings=len(task.dictionary),
-                    embedding_dim=Y_DIM,
-                    padding_idx=task.dictionary.pad(),
-                ),
+                embedding,
                 MLPEncoder(X_DIM, Y_DIM, R_DIM, H_DIM),
                 MeanAggregator(X_DIM, R_DIM),
                 MLPEncoder(X_DIM, Y_DIM, S_DIM, H_DIM),
@@ -178,17 +196,16 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         """
         bsize = prev_output_tokens.shape[0]
         x_context, y_context, x_target, y_target = None, None, None, None
-        
+
         if self.training:
             x = self.positional_embedder(prev_output_tokens)
             y = self.word_embedder(prev_output_tokens)
             x_context, y_context, x_target, y_target = context_target_split(x, y)
-
         else:
             x = self._encode_positions(torch.cat((prev_output_tokens, torch.zeros((bsize, 1)).to(self.device)), dim=1))
             y_context = self.embedding(prev_output_tokens)
             x_context = x[:, :-1, :]
-            x_target = x[:, -1:, :]
+            x_target = x
 
         # x_context : torch.Tensor
         #     Shape (batch_size, num_context, x_dim). Note that x_context is a
@@ -211,8 +228,8 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         s_target = self.latent_aggregator(s_i_target) if self.training else None
 
         # Generate q distributions for context and target inputs
-        q_context = self._normal_latent_distribution(s_context)
-        q_target = self._normal_latent_distribution(s_target) if self.training else None
+        q_context = self.latent_distribution(s_context)
+        q_target = self.latent_distribution(s_target) if self.training else None
 
         # Sample latent variable z from from context distribution
         z_context = q_context.sample()
@@ -230,7 +247,7 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
             mu = s[..., 0]
             sigma = F.softplus(s[..., 1])
         return torch.distributions.Independent(
-            torch.distributions.Normal(loc=mu, scale=sigma), 2) # we have two output axes: B x Z_dim
+            torch.distributions.Normal(loc=mu, scale=sigma), 0) # we have two output axes: B x Z_dim
 
     def get_normalized_probs(
         self,
@@ -239,9 +256,10 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         sample: Optional[Dict[str, torch.Tensor]] = None,
     ):
         """Get normalized probabilities (or log probs) from a net's output."""
-        y_pred, _ = net_output
-        y_pred_probs = torch.distributions.Categorical(logits=y_pred).probs
-        return y_pred_probs if not log_probs else torch.log(y_pred_probs)
+        y_pred = net_output[0]
+        y_pred_probs = torch.distributions.Categorical(logits=y_pred).probs.type(torch.float)
+        # return y_pred_probs if not log_probs else torch.log(y_pred_probs)
+        return y_pred_probs
 
     def _encode_positions(self, tokens):
         x = self.positional_embedder(tokens)
