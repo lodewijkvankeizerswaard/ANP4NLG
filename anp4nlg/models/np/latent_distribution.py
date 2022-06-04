@@ -39,8 +39,9 @@ class NormalLatentDistribution(LatentDistribution):
 
     def forward(self, s: torch.Tensor) -> td.Distribution:
         mu = s[..., 0]
-        sigma = F.softplus(s[..., 1])
-        return td.Independent(td.Normal(loc=mu, scale=sigma), 0) # we have two output axes: B x Z_dim
+        sigma = 0.1 + 0.9 * torch.sigmoid(s[..., 1])
+
+        return td.Normal(loc=mu, scale=sigma) # we have two output axes: B x Z_dim
 
 class StdNormalLatentDistribution(LatentDistribution):
     def __init__(self, z_dim: int, r_dim: tuple):

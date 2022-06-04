@@ -219,23 +219,13 @@ class NeuralProcessDecoder(FairseqIncrementalDecoder):
         q_context = self.latent_distribution(s_context)
         q_target = self.latent_distribution(s_target) if self.training else None
 
-        # Sample latent variable z from from context distribution
-        z_context = q_context.sample()
+        # Sample latent variable z using reparametrization trick
+        z_context = q_target.rsample() if self.training else q_context.rsample()
 
         # Decode
         y_pred = self.decoder(x_target, r_context, z_context)
 
         return y_pred, None, q_context, q_target
-
-    def _normal_latent_distribution(self, s: torch.Tensor, std_normal=False) -> torch.distributions.Distribution:
-        if std_normal:
-            mu = 0
-            sigma = 1
-        else:
-            mu = s[..., 0]
-            sigma = F.softplus(s[..., 1])
-        return torch.distributions.Independent(
-            torch.distributions.Normal(loc=mu, scale=sigma), 0) # we have two output axes: B x Z_dim
 
     def get_normalized_probs(
         self,
