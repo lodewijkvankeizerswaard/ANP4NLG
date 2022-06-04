@@ -50,5 +50,6 @@ class StdNormalLatentDistribution(LatentDistribution):
         # TODO check if we need to use registered buffers for Latent distributions
         mu = s[..., 0]
         sigma = F.softplus(s[..., 1])
-        return td.Independent(td.Normal(loc=torch.zeros_like(mu), scale=torch.ones_like(sigma)), 2) # we have two output axes: B x Z_dim
+
+        return td.Independent(td.Normal(loc=torch.zeros_like(mu), scale=torch.ones_like(sigma)), 0) # we have two output axes: B x Z_dim
 
