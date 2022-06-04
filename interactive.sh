@@ -1,7 +1,18 @@
 #!/bin/bash
 
+# Sample text from a language model
+
+# Usage: ./interactive.sh -m /path/to/model.pt
+
+while getopts m:c: flag
+do
+    case "${flag}" in
+        m) MODEL_PATH=${OPTARG};;
+    esac
+done
+
 fairseq-interactive \
-  --path checkpoints/transformer_wikitext-103/checkpoint_last.pt \
+  --path $MODEL_PATH \
   data-bin/wikitext-103/ \
   --task language_modeling \
   --bpe subword_nmt \
@@ -13,5 +24,4 @@ fairseq-interactive \
   --no-repeat-ngram-size 3 \
   --nbest 5 \
   --temperature 1.5 \
-  --min-len 64 \
-  --sacrebleu
+  --min-len 64
