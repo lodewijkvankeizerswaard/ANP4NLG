@@ -21,4 +21,5 @@ fairseq-train data-bin/wikitext-103 \
     --update-freq 16 \
     --max-update 50000 \
     --cpu \
-    --criterion neural_process
+    --criterion neural_process \
+    --batch-size 128
