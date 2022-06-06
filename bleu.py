@@ -24,8 +24,8 @@ def load_data(path: str='wikitext-103/wiki.test.tokens') -> str:
 
 
 def load_model(
-    model_dir: str='checkpoints/transformer_wikitext-103',
-    checkpoint_file: str='checkpoint_sent_len_32.pt',
+    model_dir: str='checkpoints',
+    checkpoint_file: str='checkpoint_32.pt',
     data_dir: str='data-bin/wikitext-103'
 ) -> NeuralProcess:
     lm = NeuralProcess.from_pretrained(
