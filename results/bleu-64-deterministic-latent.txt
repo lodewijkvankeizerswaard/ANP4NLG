@@ -1,0 +1,5 @@
+Highest scoring sentence has score 0.5305700387751149
+Highscore sentence context: . The fruit are <unk> by animals ; fruit which are not <unk> frequently <unk> <unk> <unk> by <unk> <unk> .
+Highscore sentence reference: <unk> species of <unk> have been mentioned as examples of " <unk> " species which are adapted for <unk> by now @-@ <unk> <unk> <unk> . On <unk> Island , <unk> , in the <unk> <unk> , <unk> <unk> fruit were <unk> by
+Highscore sentence hypothesis: quently <unk> <unk> <unk> by <unk> <unk> . , species are , a <unk> " <unk> of . and , <unk> by and <unk> species <unk> by , <unk> <unk> or <unk> of <unk> <unk> in and are " , and or , <unk> species species , a and the <unk> and . <unk> <unk> and <unk> . <unk> in in " <unk> , <unk> , @-@
+BLEU: 0.07227863196163135

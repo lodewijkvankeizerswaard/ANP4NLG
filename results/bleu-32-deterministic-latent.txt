@@ -1,0 +1,5 @@
+Highest scoring sentence has score 0.45161290322580644
+Highscore sentence context: and converted 28 from older ships of the line , while the United Kingdom built 18 and converted 41 . =
+Highscore sentence reference: = = <unk> shells = = = The era of the wooden steam ship @-@ of @-@ the @-@ line was brief , because of new , more powerful naval guns . In the <unk> and <unk> , <unk> began to <unk> increasingly
+Highscore sentence hypothesis:  Kingdom built 18 and converted 41 . = of ship , from . @-@ was class @-@ Navy was @-@ Navy The to = . was The on to the . of a the the = on ship Navy on class on ship from a of and of The the to class for for the of , of , , a on class , on for on and to Navy in , and
+BLEU: 0.04617512632192042

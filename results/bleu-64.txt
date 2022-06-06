@@ -1,0 +1,5 @@
+Highest scoring sentence has score 0.5146664998635688
+Highscore sentence context: second <unk> taken in @-@ competition on July 9 tested positive for the same banned <unk> discovered in the previous out
+Highscore sentence reference: @-@ of @-@ competition <unk> . = = = <unk> pay @-@ per @-@ views = = = = = Personal life = = <unk> married <unk> Greek , better known as <unk> , on May 6 , 2006 . They <unk> on
+Highscore sentence hypothesis: for the same banned <unk> discovered in the previous out the = @-@ in = the = in the The and @-@ the The . of first @-@ of , first @-@ in the = , <unk> the in by by = , @-@ the on . of was = of = and
+BLEU: 0.06565760793478354

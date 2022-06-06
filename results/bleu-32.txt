@@ -1,0 +1,5 @@
+Highest scoring sentence has score 0.6297017414619639
+Highscore sentence context: , <unk> , is a university professor . She has previously taught at <unk> . = = Head <unk> record =
+Highscore sentence reference: = = = = College = = = = = = NBA = = = = = = Awards and nominations = = = Henry <unk> <unk> of the Year Award <unk> ( 2009 ) <unk> League <unk> of the Year ( 2009
+Highscore sentence hypothesis: at <unk> . = = Head <unk> record = = a = a has a = , , is = = born = <unk> is = . = and = at , = born in is = the born = in , . @-@ = <unk> , <unk> = = = and
+BLEU: 0.06886171392821945
