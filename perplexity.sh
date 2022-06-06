@@ -15,7 +15,7 @@ done
 fairseq-eval-lm data-bin/wikitext-103 \
     --path $MODEL_PATH \
     --batch-size 128 \
-    --tokens-per-sample 64 \
+    --tokens-per-sample 32 \
     --context-window 1 \
     --user-dir anp4nlg \
     --self-target
